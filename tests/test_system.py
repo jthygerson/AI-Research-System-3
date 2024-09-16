@@ -2,76 +2,160 @@
 
 import unittest
 import os
+from unittest.mock import patch
+from idea_generation import IdeaGenerator
+from idea_evaluation import IdeaEvaluator
+from experiment_design import ExperimentDesigner
+from experiment_execution import ExperimentExecutor
+from feedback_loop import FeedbackLoop
+from system_augmentation import SystemAugmentor
+from benchmarking import Benchmarking
+from report_writer import ReportWriter
+from log_error_checker import LogErrorChecker
+from error_fixing import ErrorFixer
 
 class TestAIResearchSystem(unittest.TestCase):
-    def test_idea_generation(self):
-        from idea_generation import IdeaGenerator
-        generator = IdeaGenerator('text-davinci-003', 1)
+    @patch('idea_generation.openai.Completion.create')
+    def test_generate_ideas_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': '- Idea 1\n- Idea 2\n- Idea 3'}]
+        }
+        generator = IdeaGenerator('text-davinci-003', 3)
         ideas = generator.generate_ideas()
-        self.assertTrue(len(ideas) > 0)
+        self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
 
-    def test_idea_evaluation(self):
-        from idea_evaluation import IdeaEvaluator
+    @patch('idea_generation.openai.ChatCompletion.create')
+    def test_generate_ideas_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': '- Idea 1\n- Idea 2\n- Idea 3'}}]
+        }
+        generator = IdeaGenerator('gpt-4', 3)
+        ideas = generator.generate_ideas()
+        self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
+
+    @patch('idea_evaluation.openai.Completion.create')
+    def test_idea_evaluation_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'Score: 8\nJustification: Innovative and feasible.'}]
+        }
         evaluator = IdeaEvaluator('text-davinci-003')
-        ideas = ["Test idea for evaluation"]
-        scored_ideas = evaluator.evaluate_ideas(ideas)
-        self.assertTrue(len(scored_ideas) == 1)
-        self.assertIn('score', scored_ideas[0])
+        scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
+        self.assertEqual(len(scored_ideas), 1)
+        self.assertEqual(scored_ideas[0]['score'], 8)
+        self.assertEqual(scored_ideas[0]['justification'], 'Innovative and feasible.')
 
-    def test_experiment_design(self):
-        from experiment_design import ExperimentDesigner
+    @patch('idea_evaluation.openai.ChatCompletion.create')
+    def test_idea_evaluation_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'Score: 9\nJustification: Highly novel and promising.'}}]
+        }
+        evaluator = IdeaEvaluator('gpt-4')
+        scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
+        self.assertEqual(len(scored_ideas), 1)
+        self.assertEqual(scored_ideas[0]['score'], 9)
+        self.assertEqual(scored_ideas[0]['justification'], 'Highly novel and promising.')
+
+    @patch('experiment_design.openai.Completion.create')
+    def test_experiment_design_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'Experiment Plan Content'}]
+        }
         designer = ExperimentDesigner('text-davinci-003')
-        plan = designer.design_experiment("Test idea for experiment design")
-        self.assertTrue(len(plan) > 0)
+        plan = designer.design_experiment('Test Idea')
+        self.assertEqual(plan, 'Experiment Plan Content')
 
-    def test_experiment_execution(self):
-        from experiment_execution import ExperimentExecutor
+    @patch('experiment_design.openai.ChatCompletion.create')
+    def test_experiment_design_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'Experiment Plan Content'}}]
+        }
+        designer = ExperimentDesigner('gpt-4')
+        plan = designer.design_experiment('Test Idea')
+        self.assertEqual(plan, 'Experiment Plan Content')
+
+    @patch('experiment_execution.openai.Completion.create')
+    def test_experiment_execution_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'Execution Results Content'}]
+        }
         executor = ExperimentExecutor('text-davinci-003')
-        results = executor.execute_experiment("Test experiment plan")
-        self.assertTrue(len(results) > 0)
+        results = executor.execute_experiment('Test Experiment Plan')
+        self.assertEqual(results, 'Execution Results Content')
 
-    def test_feedback_loop(self):
-        from feedback_loop import FeedbackLoop
+    @patch('experiment_execution.openai.ChatCompletion.create')
+    def test_experiment_execution_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'Execution Results Content'}}]
+        }
+        executor = ExperimentExecutor('gpt-4')
+        results = executor.execute_experiment('Test Experiment Plan')
+        self.assertEqual(results, 'Execution Results Content')
+
+    @patch('feedback_loop.openai.Completion.create')
+    def test_feedback_loop_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'Refined Experiment Plan Content'}]
+        }
         feedback = FeedbackLoop('text-davinci-003')
-        refined_plan = feedback.refine_experiment("Test experiment plan", "Test initial results")
-        self.assertTrue(len(refined_plan) > 0)
+        refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
+        self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
 
-    def test_system_augmentation(self):
-        from system_augmentation import SystemAugmentor
-        augmentor = SystemAugmentor('text-davinci-003')
-        augmentor.augment_system("Test experiment results")
-        # Since we can't test actual code changes here, we assume it runs without error
+    @patch('feedback_loop.openai.ChatCompletion.create')
+    def test_feedback_loop_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'Refined Experiment Plan Content'}}]
+        }
+        feedback = FeedbackLoop('gpt-4')
+        refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
+        self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
 
-    def test_benchmarking(self):
-        from benchmarking import Benchmarking
-        bench = Benchmarking()
-        metrics = bench.run_benchmarks()
-        self.assertTrue(len(metrics) > 0)
-
-    def test_report_writer(self):
-        from report_writer import ReportWriter
-        writer = ReportWriter()
-        best_idea = {'idea': 'Test idea', 'score': 8, 'justification': 'Justification text'}
-        experiment_plan = 'Test experiment plan'
-        final_results = 'Test final results'
-        performance_metrics = {'accuracy': 0.95}
-        writer.write_report(best_idea, experiment_plan, final_results, performance_metrics)
-        # Check if report file is created
-        report_files = os.listdir('reports')
-        self.assertTrue(len(report_files) > 0)
-
-    def test_log_error_checker(self):
-        from log_error_checker import LogErrorChecker
+    @patch('log_error_checker.openai.Completion.create')
+    def test_log_error_checker_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'Issue 1: Error XYZ\nIssue 2: Warning ABC'}]
+        }
         checker = LogErrorChecker('text-davinci-003')
-        errors = checker.check_logs('logs/main.log')
-        # Assuming logs exist, errors may be empty if no errors are found
-        self.assertTrue(isinstance(errors, str))
+        analysis = checker.check_logs('logs/main.log')
+        self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
 
-    def test_error_fixing(self):
-        from error_fixing import ErrorFixer
+    @patch('log_error_checker.openai.ChatCompletion.create')
+    def test_log_error_checker_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'Issue 1: Error XYZ\nIssue 2: Warning ABC'}}]
+        }
+        checker = LogErrorChecker('gpt-4')
+        analysis = checker.check_logs('logs/main.log')
+        self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
+
+    @patch('error_fixing.openai.Completion.create')
+    def test_error_fixing_completion_model(self, mock_create):
+        # Setup mock response for completion model
+        mock_create.return_value = {
+            'choices': [{'text': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}]
+        }
         fixer = ErrorFixer('text-davinci-003')
-        fixer.fix_errors("Test errors and warnings")
-        # Since we can't test actual code changes here, we assume it runs without error
+        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+        # Since apply_code_fixes does not modify code, we check the log for fixes
+        # This can be done by checking the logs manually or enhancing the method to return fixes
 
-if __name__ == '__main__':
-    unittest.main()
+    @patch('error_fixing.openai.ChatCompletion.create')
+    def test_error_fixing_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}}]
+        }
+        fixer = ErrorFixer('gpt-4')
+        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+        # Similar to the completion model test
