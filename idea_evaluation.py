@@ -49,9 +49,17 @@ class IdeaEvaluator:
                 
                 # Extract score and justification
                 lines = evaluation.split('\n')
-                score_line = next((line for line in lines if 'Score' in line or 'score' in line), '')
+                score_line = next((line for line in lines if 'Score' in line.lower()), '')
                 justification = '\n'.join(lines[1:]).strip() if len(lines) > 1 else ''
-                score = int(''.join(filter(str.isdigit, score_line))) if score_line else 0
+                
+                # Remove 'Justification: ' prefix if present
+                if justification.lower().startswith('justification:'):
+                    justification = justification[len('Justification:'):].strip()
+                
+                # Extract score number
+                score_str = ''.join(filter(str.isdigit, score_line))
+                score = int(score_str) if score_str else 0
+                
                 scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
             except Exception as e:
