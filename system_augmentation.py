@@ -58,4 +58,4 @@ class SystemAugmentor:
         self.logger.info("Applying code modifications...")
         # Implement parsing of code_modifications and apply changes to files
         # Due to safety concerns, actual code modification is not implemented
-        self.logger.info(f"Code modifications logged but not applied for safety.")
+        self.logger.info("Code modifications logged but not applied for safety.")

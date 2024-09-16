@@ -1,7 +1,6 @@
 # idea_generation.py
 
 import os
-import openai
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -20,10 +19,10 @@ class IdeaGenerator:
         self.logger.info("Generating ideas...")
         try:
             prompt = (
-                "Generate a list of {} innovative research ideas in the field of AI, focusing on discovering new ways "
+                f"Generate a list of {self.num_ideas} innovative research ideas in the field of AI, focusing on discovering new ways "
                 "to improve an AI Research System's own research performance, considering resource constraints. "
                 "Each idea should be concise and clear."
-            ).format(self.num_ideas)
+            )
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4']  # Define chat models
             if self.model_name in chat_models:

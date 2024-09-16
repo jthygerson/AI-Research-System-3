@@ -1,8 +1,8 @@
 # idea_evaluation.py
 
 import os
-import openai
 import re  # Import regex module
+import json  # Import JSON module for parsing
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -30,7 +30,13 @@ class IdeaEvaluator:
             try:
                 prompt = (
                     f"Evaluate the following research idea based on novelty and probability of success on a scale "
-                    f"from 1 to 10 (10 being highest). Provide the score and a brief justification.\n\nIdea: {idea}"
+                    f"from 1 to 10 (10 being highest). Provide the score and a brief justification in JSON format.\n\n"
+                    f"Idea: {idea}\n\n"
+                    f"Example Response:\n"
+                    f"{{\n"
+                    f'  "score": 8,\n'
+                    f'  "justification": "Innovative and feasible."\n'
+                    f"}}"
                 )
                 
                 if self.model_name in chat_models:
@@ -54,14 +60,16 @@ class IdeaEvaluator:
                     )
                     evaluation = response['choices'][0]['text'].strip()
                 
-                # Use regex to extract score
-                score_match = re.search(r'Score\s*:\s*(\d+)', evaluation, re.IGNORECASE)
-                score = int(score_match.group(1)) if score_match else 0
-
-                # Use regex to extract justification
-                justification_match = re.search(r'Justification\s*:\s*(.+)', evaluation, re.IGNORECASE)
-                justification = justification_match.group(1).strip() if justification_match else ''
-
+                # Parse JSON response
+                try:
+                    evaluation_json = json.loads(evaluation)
+                    score = evaluation_json.get('score', 0)
+                    justification = evaluation_json.get('justification', '')
+                except json.JSONDecodeError:
+                    self.logger.error(f"Failed to parse evaluation response as JSON for idea '{idea}'.")
+                    score = 0
+                    justification = ''
+    
                 scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
             except Exception as e:

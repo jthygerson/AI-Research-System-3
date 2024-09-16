@@ -1,7 +1,6 @@
 # log_error_checker.py
 
 import os
-import openai
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai

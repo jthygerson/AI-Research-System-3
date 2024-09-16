@@ -1,7 +1,6 @@
 # feedback_loop.py
 
 import os
-import openai
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -38,7 +37,7 @@ class FeedbackLoop:
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    refined_plan = response['choices'][0]['message']['content'].strip()
+                    new_refined_plan = response['choices'][0]['message']['content'].strip()
                 else:
                     response = create_completion(
                         self.model_name,
@@ -46,13 +45,25 @@ class FeedbackLoop:
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    refined_plan = response['choices'][0]['text'].strip()
+                    new_refined_plan = response['choices'][0]['text'].strip()
                 
-                self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {refined_plan}")
+                self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {new_refined_plan}")
 
-                # For simplicity, we'll assume the refined plan is acceptable
-                break  # Exit after first refinement
+                # Decide whether to continue refining
+                if self.should_continue_refinement(refined_plan, new_refined_plan):
+                    refined_plan = new_refined_plan
+                else:
+                    break  # Exit if no significant improvement
+
             return refined_plan
         except Exception as e:
             self.logger.error(f"Error refining experiment plan: {e}")
             return experiment_plan
+
+    def should_continue_refinement(self, old_plan, new_plan):
+        """
+        Determines whether to continue refining the experiment plan.
+        Implement logic based on your criteria.
+        """
+        # Placeholder implementation
+        return old_plan != new_plan
