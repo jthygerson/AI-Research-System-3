@@ -24,8 +24,8 @@ class IdeaGenerator:
                 "Each idea should be concise and clear."
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4']  # Define chat models
-            if self.model_name in chat_models:
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']  # Ensure all chat models are recognized
+            if self.model_name.lower().startswith(tuple([model.lower() for model in chat_models])):
                 messages = [
                     {"role": "system", "content": "You are an AI research assistant."},
                     {"role": "user", "content": prompt}

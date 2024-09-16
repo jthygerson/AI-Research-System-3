@@ -21,14 +21,27 @@ from utils.logger import setup_logger
 from utils.code_backup import backup_code, restore_code
 
 def main():
-    parser = argparse.ArgumentParser(description='AI Research System')
+    # Initialize argument parser
+    parser = argparse.ArgumentParser(description='AI Research System Orchestrator')
     parser.add_argument('--model_name', type=str, required=True, help='Name of the OpenAI model to use')
     parser.add_argument('--num_ideas', type=int, required=True, help='Number of ideas to generate')
     parser.add_argument('--num_experiments', type=int, required=True, help='Number of experiment runs')
     args = parser.parse_args()
 
+    # Define supported models
+    chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']
+    completion_models = ['text-davinci-003', 'text-curie-001', 'text-babbage-001', 'text-ada-001']  # Add more if needed
+    supported_models = chat_models + completion_models
+
+    # Normalize and validate model name
+    model_name = args.model_name.strip()
+    if not any(model_name.lower().startswith(model.lower()) for model in supported_models):
+        print(f"Error: Unsupported model_name '{model_name}'. Please choose a supported model.")
+        sys.exit(1)
+
     # Setup main logger
     main_logger = setup_logger('main_logger', 'logs/main.log')
+    main_logger.info(f"Starting AI Research System with model: {model_name}, {args.num_ideas} ideas, {args.num_experiments} experiments.")
 
     # Backup code before starting
     backup_dir = 'code_backups'
@@ -45,53 +58,81 @@ def main():
             main_logger.info(f"Starting experiment run {experiment_run + 1}")
 
             # Step 1: Idea Generation
-            idea_generator = IdeaGenerator(args.model_name, args.num_ideas)
+            idea_generator = IdeaGenerator(model_name, args.num_ideas)
             ideas = idea_generator.generate_ideas()
+            if not ideas:
+                main_logger.error(f"No ideas generated in experiment run {experiment_run + 1}. Skipping.")
+                continue
 
             # Step 2: Idea Evaluation
-            idea_evaluator = IdeaEvaluator(args.model_name)
+            idea_evaluator = IdeaEvaluator(model_name)
             scored_ideas = idea_evaluator.evaluate_ideas(ideas)
-
-            # Select the best idea based on the highest score
             if not scored_ideas:
                 main_logger.error("No ideas were scored. Skipping this experiment run.")
                 continue
+
+            # Select the best idea based on the highest score
             best_idea = max(scored_ideas, key=lambda x: x['score'])
+            main_logger.info(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
 
             # Step 3: Experiment Design
-            experiment_designer = ExperimentDesigner(args.model_name)
+            experiment_designer = ExperimentDesigner(model_name)
             experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
+            if not experiment_plan:
+                main_logger.error("Failed to design experiment. Skipping this experiment run.")
+                continue
+            main_logger.info(f"Designed Experiment Plan: {experiment_plan}")
 
             # Step 4: Experiment Execution
-            experiment_executor = ExperimentExecutor(args.model_name)
+            experiment_executor = ExperimentExecutor(model_name)
             initial_results = experiment_executor.execute_experiment(experiment_plan)
+            if not initial_results:
+                main_logger.error("Failed to execute experiment. Skipping this experiment run.")
+                continue
+            main_logger.info(f"Initial Execution Results: {initial_results}")
 
             # Step 5: Feedback Loop
-            feedback_loop = FeedbackLoop(args.model_name)
+            feedback_loop = FeedbackLoop(model_name)
             refined_plan = feedback_loop.refine_experiment(experiment_plan, initial_results)
+            if not refined_plan:
+                main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
+                continue
+            main_logger.info(f"Refined Experiment Plan: {refined_plan}")
 
             # Step 6: Refined Experiment Execution
             final_results = experiment_executor.execute_experiment(refined_plan)
+            if not final_results:
+                main_logger.error("Failed to execute refined experiment. Skipping this experiment run.")
+                continue
+            main_logger.info(f"Final Execution Results: {final_results}")
 
             # Step 7: System Augmentation
-            system_augmentor = SystemAugmentor(args.model_name)
+            system_augmentor = SystemAugmentor(model_name)
             system_augmentor.augment_system(final_results)
+            main_logger.info("System augmentation completed.")
 
             # Step 8: Benchmarking
             benchmarking = Benchmarking()
             performance_metrics = benchmarking.run_benchmarks()
+            main_logger.info(f"Performance Metrics: {performance_metrics}")
 
             # Step 9: Report Writing
             report_writer = ReportWriter()
             report_writer.write_report(best_idea, refined_plan, final_results, performance_metrics)
+            main_logger.info("Report written successfully.")
 
             # Step 10: Log Error Checking
-            log_error_checker = LogErrorChecker(args.model_name)
+            log_error_checker = LogErrorChecker(model_name)
             errors_warnings = log_error_checker.check_logs('logs/main.log')
+            main_logger.info(f"Log Analysis: {errors_warnings}")
 
             # Step 11: Error Fixing
-            error_fixer = ErrorFixer(args.model_name)
-            error_fixer.fix_errors(errors_warnings)
+            if errors_warnings:
+                error_fixer = ErrorFixer(model_name)
+                error_fixer.fix_errors(errors_warnings)
+                main_logger.info("Error fixing completed.")
+            else:
+                main_logger.info("No errors or warnings found in logs.")
 
             # Run tests after modifications
             main_logger.info("Running unit tests...")
@@ -116,5 +157,5 @@ def main():
 
         sys.exit(1)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
