@@ -5,14 +5,14 @@ import openai
 def create_completion(model_name, **kwargs):
     """
     Creates a completion using the appropriate OpenAI API endpoint based on the model type.
-    
+
     Parameters:
         model_name (str): The name of the OpenAI model to use.
         **kwargs: Additional keyword arguments to pass to the OpenAI API.
-        
+
     Returns:
         dict: The response from the OpenAI API.
-        
+
     Raises:
         ValueError: If required parameters are missing based on the model type.
     """

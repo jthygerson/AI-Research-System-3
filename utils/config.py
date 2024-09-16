@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 def initialize_openai():
     """
     Initializes the OpenAI API key from environment variables.
-    
+
     Raises:
         ValueError: If the OPENAI_API_KEY environment variable is not set.
     """

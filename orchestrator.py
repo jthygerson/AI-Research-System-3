@@ -94,7 +94,12 @@ def main():
             error_fixer.fix_errors(errors_warnings)
 
             # Run tests after modifications
-            os.system('python -m unittest discover tests')
+            main_logger.info("Running unit tests...")
+            test_result = os.system('python -m unittest discover tests')
+            if test_result != 0:
+                main_logger.error("Unit tests failed. Check the test reports for details.")
+            else:
+                main_logger.info("All unit tests passed successfully.")
 
         main_logger.info("All experiment runs completed successfully.")
 

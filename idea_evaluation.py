@@ -2,6 +2,7 @@
 
 import os
 import openai
+import re  # Import regex module
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -15,6 +16,12 @@ class IdeaEvaluator:
     def evaluate_ideas(self, ideas):
         """
         Evaluates ideas based on novelty and probability of success.
+
+        Parameters:
+            ideas (list): List of idea strings to evaluate.
+
+        Returns:
+            list: List of dictionaries with idea, score, and justification.
         """
         self.logger.info("Evaluating ideas...")
         scored_ideas = []
@@ -47,19 +54,14 @@ class IdeaEvaluator:
                     )
                     evaluation = response['choices'][0]['text'].strip()
                 
-                # Extract score and justification
-                lines = evaluation.split('\n')
-                score_line = next((line for line in lines if 'Score' in line.lower()), '')
-                justification = '\n'.join(lines[1:]).strip() if len(lines) > 1 else ''
-                
-                # Remove 'Justification: ' prefix if present
-                if justification.lower().startswith('justification:'):
-                    justification = justification[len('Justification:'):].strip()
-                
-                # Extract score number
-                score_str = ''.join(filter(str.isdigit, score_line))
-                score = int(score_str) if score_str else 0
-                
+                # Use regex to extract score
+                score_match = re.search(r'Score\s*:\s*(\d+)', evaluation, re.IGNORECASE)
+                score = int(score_match.group(1)) if score_match else 0
+
+                # Use regex to extract justification
+                justification_match = re.search(r'Justification\s*:\s*(.+)', evaluation, re.IGNORECASE)
+                justification = justification_match.group(1).strip() if justification_match else ''
+
                 scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
             except Exception as e:

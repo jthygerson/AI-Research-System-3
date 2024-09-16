@@ -6,15 +6,16 @@ from logging.handlers import RotatingFileHandler
 
 def setup_logger(name, log_file, level=logging.INFO, max_bytes=5*1024*1024, backup_count=5):
     """
-    Sets up a logger with rotation. Ensures that multiple handlers are not added to the same logger.
-    
+    Sets up a logger with rotation. Ensures that multiple handlers are not added to the same logger
+    and prevents log propagation to parent loggers to avoid duplicate logging.
+
     Parameters:
         name (str): Name of the logger.
         log_file (str): Path to the log file.
         level (int): Logging level.
         max_bytes (int): Maximum size of the log file before rotation.
         backup_count (int): Number of backup files to keep.
-    
+
     Returns:
         logging.Logger: Configured logger instance.
     """
@@ -31,5 +32,6 @@ def setup_logger(name, log_file, level=logging.INFO, max_bytes=5*1024*1024, back
         handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+        logger.propagate = False  # Prevent logs from propagating to the root logger
 
     return logger
