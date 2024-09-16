@@ -1,7 +1,7 @@
 # tests/test_system.py
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from idea_generation import IdeaGenerator
 from idea_evaluation import IdeaEvaluator
 from experiment_design import ExperimentDesigner
@@ -33,7 +33,7 @@ class TestAIResearchSystem(unittest.TestCase):
                 logger.removeHandler(handler)
 
     # Tests for IdeaGenerator
-    @patch('idea_generation.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_generate_ideas_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
@@ -43,7 +43,7 @@ class TestAIResearchSystem(unittest.TestCase):
         ideas = generator.generate_ideas()
         self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
 
-    @patch('idea_generation.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_generate_ideas_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
@@ -54,11 +54,11 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
 
     # Tests for IdeaEvaluator
-    @patch('idea_evaluation.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_idea_evaluation_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
-            'choices': [{'text': 'Score: 8\nJustification: Innovative and feasible.'}]
+            'choices': [{'text': '{"score": 8, "justification": "Innovative and feasible."}'}]
         }
         evaluator = IdeaEvaluator('text-davinci-003')
         scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
@@ -66,11 +66,11 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(scored_ideas[0]['score'], 8)
         self.assertEqual(scored_ideas[0]['justification'], 'Innovative and feasible.')
 
-    @patch('idea_evaluation.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_idea_evaluation_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
-            'choices': [{'message': {'content': 'Score: 9\nJustification: Highly novel and promising.'}}]
+            'choices': [{'message': {'content': '{"score": 9, "justification": "Highly novel and promising."}'} }]
         }
         evaluator = IdeaEvaluator('gpt-4')
         scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
@@ -79,7 +79,7 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(scored_ideas[0]['justification'], 'Highly novel and promising.')
 
     # Tests for ExperimentDesigner
-    @patch('experiment_design.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_experiment_design_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
@@ -89,7 +89,7 @@ class TestAIResearchSystem(unittest.TestCase):
         plan = designer.design_experiment('Test Idea')
         self.assertEqual(plan, 'Experiment Plan Content')
 
-    @patch('experiment_design.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_experiment_design_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
@@ -100,7 +100,7 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(plan, 'Experiment Plan Content')
 
     # Tests for ExperimentExecutor
-    @patch('experiment_execution.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_experiment_execution_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
@@ -110,7 +110,7 @@ class TestAIResearchSystem(unittest.TestCase):
         results = executor.execute_experiment('Test Experiment Plan')
         self.assertEqual(results, 'Execution Results Content')
 
-    @patch('experiment_execution.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_experiment_execution_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
@@ -121,7 +121,7 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(results, 'Execution Results Content')
 
     # Tests for FeedbackLoop
-    @patch('feedback_loop.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_feedback_loop_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
@@ -131,7 +131,7 @@ class TestAIResearchSystem(unittest.TestCase):
         refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
         self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
 
-    @patch('feedback_loop.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_feedback_loop_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
@@ -142,7 +142,7 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
 
     # Tests for LogErrorChecker
-    @patch('log_error_checker.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_log_error_checker_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
@@ -152,7 +152,7 @@ class TestAIResearchSystem(unittest.TestCase):
         analysis = checker.check_logs('logs/main.log')
         self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
 
-    @patch('log_error_checker.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_log_error_checker_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
@@ -163,26 +163,27 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
 
     # Tests for ErrorFixer
-    @patch('error_fixing.openai.Completion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_error_fixing_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
             'choices': [{'text': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}]
         }
-        fixer = ErrorFixer('text-davinci-003')
-        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
-        # Since apply_code_fixes does not modify code, we check the log for fixes
-        # This can be done by checking the logs manually or enhancing the method to return fixes
+        with patch.object(ErrorFixer, 'apply_code_fixes') as mock_apply:
+            fixer = ErrorFixer('text-davinci-003')
+            fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+            mock_apply.assert_called_once_with('File: utils/logger.py\nLine 45: Add log rotation handler.')
 
-    @patch('error_fixing.openai.ChatCompletion.create')
+    @patch('utils.openai_utils.create_completion')
     def test_error_fixing_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = {
             'choices': [{'message': {'content': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}}]
         }
-        fixer = ErrorFixer('gpt-4')
-        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
-        # Similar to the completion model test
+        with patch.object(ErrorFixer, 'apply_code_fixes') as mock_apply:
+            fixer = ErrorFixer('gpt-4')
+            fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+            mock_apply.assert_called_once_with('File: utils/logger.py\nLine 45: Add log rotation handler.')
 
 if __name__ == '__main__':
     unittest.main()
