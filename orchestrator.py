@@ -18,7 +18,7 @@ from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 
 from utils.logger import setup_logger
-from utils.code_backup.py import backup_code, restore_code
+from utils.code_backup import backup_code, restore_code
 
 def main():
     parser = argparse.ArgumentParser(description='AI Research System')
