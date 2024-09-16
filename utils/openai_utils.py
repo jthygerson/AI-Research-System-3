@@ -12,6 +12,9 @@ def create_completion(model_name, **kwargs):
         
     Returns:
         dict: The response from the OpenAI API.
+        
+    Raises:
+        ValueError: If required parameters are missing based on the model type.
     """
     chat_models = ['gpt-3.5-turbo', 'gpt-4']  # Add other chat models as needed
 

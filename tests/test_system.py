@@ -1,8 +1,6 @@
 # tests/test_system.py
 
 import unittest
-import os
-import logging
 from unittest.mock import patch
 from idea_generation import IdeaGenerator
 from idea_evaluation import IdeaEvaluator
@@ -11,11 +9,12 @@ from experiment_execution import ExperimentExecutor
 from feedback_loop import FeedbackLoop
 from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
+import logging
 
 class TestAIResearchSystem(unittest.TestCase):
     def tearDown(self):
         """
-        Removes all handlers from loggers after each test to prevent ResourceWarnings.
+        Remove all handlers associated with the logger to prevent ResourceWarnings.
         """
         loggers = [
             'idea_generation',
@@ -33,6 +32,7 @@ class TestAIResearchSystem(unittest.TestCase):
                 handler.close()
                 logger.removeHandler(handler)
 
+    # Tests for IdeaGenerator
     @patch('idea_generation.openai.Completion.create')
     def test_generate_ideas_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -53,6 +53,7 @@ class TestAIResearchSystem(unittest.TestCase):
         ideas = generator.generate_ideas()
         self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
 
+    # Tests for IdeaEvaluator
     @patch('idea_evaluation.openai.Completion.create')
     def test_idea_evaluation_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -77,6 +78,7 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(scored_ideas[0]['score'], 9)
         self.assertEqual(scored_ideas[0]['justification'], 'Highly novel and promising.')
 
+    # Tests for ExperimentDesigner
     @patch('experiment_design.openai.Completion.create')
     def test_experiment_design_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -97,6 +99,7 @@ class TestAIResearchSystem(unittest.TestCase):
         plan = designer.design_experiment('Test Idea')
         self.assertEqual(plan, 'Experiment Plan Content')
 
+    # Tests for ExperimentExecutor
     @patch('experiment_execution.openai.Completion.create')
     def test_experiment_execution_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -117,6 +120,7 @@ class TestAIResearchSystem(unittest.TestCase):
         results = executor.execute_experiment('Test Experiment Plan')
         self.assertEqual(results, 'Execution Results Content')
 
+    # Tests for FeedbackLoop
     @patch('feedback_loop.openai.Completion.create')
     def test_feedback_loop_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -137,6 +141,7 @@ class TestAIResearchSystem(unittest.TestCase):
         refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
         self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
 
+    # Tests for LogErrorChecker
     @patch('log_error_checker.openai.Completion.create')
     def test_log_error_checker_completion_model(self, mock_create):
         # Setup mock response for completion model
@@ -157,8 +162,27 @@ class TestAIResearchSystem(unittest.TestCase):
         analysis = checker.check_logs('logs/main.log')
         self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
 
+    # Tests for ErrorFixer
     @patch('error_fixing.openai.Completion.create')
     def test_error_fixing_completion_model(self, mock_create):
         # Setup mock response for completion model
         mock_create.return_value = {
-            'choices': [{'text': 'Fil
+            'choices': [{'text': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}]
+        }
+        fixer = ErrorFixer('text-davinci-003')
+        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+        # Since apply_code_fixes does not modify code, we check the log for fixes
+        # This can be done by checking the logs manually or enhancing the method to return fixes
+
+    @patch('error_fixing.openai.ChatCompletion.create')
+    def test_error_fixing_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = {
+            'choices': [{'message': {'content': 'File: utils/logger.py\nLine 45: Add log rotation handler.'}}]
+        }
+        fixer = ErrorFixer('gpt-4')
+        fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
+        # Similar to the completion model test
+
+if __name__ == '__main__':
+    unittest.main()
