@@ -22,11 +22,11 @@ class SystemAugmentor:
                 "Identify specific improvements that can be made to the AI Research System's code to enhance its performance. "
                 "Provide the exact code modifications needed, including the file names and line numbers."
             )
-            chat_models = ['gpt-3.5-turbo', 'gpt-4']
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
             
             self.logger.debug(f"Using model: {self.model_name}")
             
-            if self.model_name in chat_models:
+            if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
                 self.logger.debug("Using chat model format")
                 messages = [
                     {"role": "system", "content": "You are an AI research assistant."},
