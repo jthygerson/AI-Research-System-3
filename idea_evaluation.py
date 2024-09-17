@@ -24,6 +24,7 @@ class IdeaEvaluator:
             list: List of dictionaries with idea, score, and justification.
         """
         self.logger.info("Evaluating ideas...")
+        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
         try:
             evaluated_ideas = []
             for idea in ideas:
@@ -75,5 +76,5 @@ class IdeaEvaluator:
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
             return evaluated_ideas
         except Exception as e:
-            self.logger.error(f"Error evaluating idea '{idea}': {e}")
+            self.logger.error(f"Error evaluating ideas: {e}")
         return evaluated_ideas
