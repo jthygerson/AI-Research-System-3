@@ -19,9 +19,18 @@ class IdeaGenerator:
         self.logger.info("Generating ideas...")
         try:
             prompt = (
-                f"Generate a list of {self.num_ideas} innovative research ideas in the field of AI, focusing on discovering new ways "
-                "to improve an AI Research System's own research performance, considering resource constraints. "
-                "Each idea should be concise and clear."
+                f"Generate a list of {self.num_ideas} innovative research ideas focused on improving the AI Research System's performance in the following areas:\n"
+                "1. Quality of idea generation\n"
+                "2. Effectiveness of idea evaluation\n"
+                "3. Quality of experiment designs\n"
+                "4. Efficiency and accuracy of experiment executions\n"
+                "5. Application of research findings\n"
+                "6. System reliability and performance\n"
+                "7. Benchmark performance on coding tasks\n"
+                "8. Report quality and comprehensiveness\n"
+                "9. Log file error-checking accuracy\n"
+                "10. Effectiveness of error fixing\n"
+                "Each idea should be concise, clear, and directly related to improving one or more of these aspects."
             )
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']

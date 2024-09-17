@@ -57,6 +57,7 @@ def main():
         print("Failed to back up code.")
 
     try:
+        previous_performance = None
         for experiment_run in range(args.num_experiments):
             main_logger.info(f"Starting experiment run {experiment_run + 1}")
             print(f"\nStarting experiment run {experiment_run + 1}")
@@ -139,14 +140,30 @@ def main():
             # Step 8: Benchmarking
             print("Running benchmarks...")
             benchmarking = Benchmarking()
-            performance_metrics = benchmarking.run_benchmarks()
-            main_logger.info(f"Performance Metrics: {performance_metrics}")
-            print(f"Performance Metrics: {performance_metrics}")
+            current_performance = benchmarking.run_benchmarks()
+            main_logger.info(f"Performance Metrics: {current_performance}")
+            print(f"Performance Metrics: {current_performance}")
+
+            if previous_performance:
+                improvement = compare_performance(previous_performance, current_performance)
+                main_logger.info(f"Performance Improvement: {improvement}")
+                print(f"Performance Improvement: {improvement}")
+
+                if not improvement:
+                    main_logger.warning("No performance improvement detected. Reverting changes.")
+                    print("No performance improvement detected. Reverting changes.")
+                    if backup_path:
+                        restore_code(backup_path, '.')
+                        main_logger.info("Restored code from backup.")
+                        print("Restored code from backup.")
+                    continue
+
+            previous_performance = current_performance
 
             # Step 9: Report Writing
             print("Writing report...")
             report_writer = ReportWriter()
-            report_writer.write_report(best_idea, refined_plan, final_results, performance_metrics)
+            report_writer.write_report(best_idea, refined_plan, final_results, current_performance)
             main_logger.info("Report written successfully.")
             print("Report written successfully.")
 
@@ -169,15 +186,20 @@ def main():
                 print("No errors or warnings found in logs.")
 
             # Run tests after modifications
-            print("Running unit tests...")
-            main_logger.info("Running unit tests...")
+            print("Running all tests...")
+            main_logger.info("Running all tests...")
             test_result = os.system('python -m unittest discover tests')
             if test_result != 0:
-                main_logger.error("Unit tests failed. Check the test reports for details.")
-                print("Unit tests failed. Check the test reports for details.")
+                main_logger.error("Tests failed. Reverting changes and terminating the experiment run.")
+                print("Tests failed. Reverting changes and terminating the experiment run.")
+                if backup_path:
+                    restore_code(backup_path, '.')
+                    main_logger.info("Restored code from backup.")
+                    print("Restored code from backup.")
+                continue
             else:
-                main_logger.info("All unit tests passed successfully.")
-                print("All unit tests passed successfully.")
+                main_logger.info("All tests passed successfully.")
+                print("All tests passed successfully.")
 
         main_logger.info("All experiment runs completed successfully.")
         print("\nAI Research System execution completed.")
@@ -191,12 +213,12 @@ def main():
         if backup_path:
             restore_code(backup_path, '.')
             main_logger.info("Restored code from backup.")
-            print("Restored code from backup.")
-        else:
-            main_logger.error("No backup available to restore.")
-            print("No backup available to restore.")
+            print("Restored code from backup due to critical failure.")
 
-        sys.exit(1)
+def compare_performance(previous, current):
+    # Implement logic to compare performance metrics
+    # Return True if there's an overall improvement, False otherwise
+    pass
 
 if __name__ == "__main__":
     main()

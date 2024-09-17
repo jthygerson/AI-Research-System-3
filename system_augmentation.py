@@ -3,6 +3,7 @@
 import os
 import ast
 import astor
+import subprocess
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -27,14 +28,24 @@ class SystemAugmentor:
 
             if self._validate_modifications(response):
                 self._apply_code_modifications(response)
-                if self._run_tests_and_evaluate():
-                    self.logger.info("System successfully augmented and tested.")
+                if self._run_tests():
+                    performance_improvement = self._evaluate_performance_improvement()
+                    if performance_improvement:
+                        self.logger.info("System successfully augmented and performance improved.")
+                    else:
+                        self._revert_changes()
+                        self.logger.info("Changes reverted due to no performance improvement.")
                 else:
                     self._revert_changes()
             else:
                 self.logger.warning("Invalid code modifications suggested. Skipping application.")
         except Exception as e:
             self.logger.error(f"Error augmenting system: {e}", exc_info=True)
+
+    def _evaluate_performance_improvement(self):
+        # Implement logic to compare performance before and after changes
+        # Return True if there's an improvement, False otherwise
+        pass
 
     def _generate_augmentation_prompt(self, experiment_results):
         return f"""Based on the following experiment results:
@@ -85,18 +96,35 @@ Provide the exact code modifications needed, including the file names and line n
         return response
 
     def _validate_modifications(self, modifications):
-        # Implement a validation mechanism to ensure suggested changes are safe
-        # This could include checking for dangerous operations, validating syntax, etc.
-        # Return True if modifications are valid, False otherwise
-        # For now, we'll assume all modifications are valid
+        self.logger.info("Validating proposed modifications...")
+        
+        # Check for potentially dangerous operations
+        dangerous_keywords = ['os.system', 'subprocess.run', 'exec', 'eval']
+        for keyword in dangerous_keywords:
+            if keyword in modifications:
+                self.logger.warning(f"Potentially dangerous operation found: {keyword}")
+                return False
+        
+        # Validate syntax of proposed changes
+        for file_path, changes in self._parse_modifications(modifications):
+            try:
+                ast.parse(changes)
+            except SyntaxError as e:
+                self.logger.error(f"Syntax error in proposed changes for {file_path}: {e}")
+                return False
+        
+        # Add more validation checks as needed
+        
         return True
 
     def _apply_code_modifications(self, code_modifications):
         self.logger.info("Applying code modifications...")
-        # Parse the code_modifications and apply changes to files
-        # This is a simplified example and should be expanded for robustness
         for file_path, changes in self._parse_modifications(code_modifications):
             self._modify_file(file_path, changes)
+        
+        # Run tests after applying modifications
+        if not self._run_tests():
+            self._revert_changes()
 
     def _parse_modifications(self, code_modifications):
         # Implement parsing logic to extract file paths and changes
@@ -120,13 +148,19 @@ Provide the exact code modifications needed, including the file names and line n
         # This is a placeholder and should be implemented based on the expected change format
         return tree
 
-    def _run_tests_and_evaluate(self):
-        self.logger.info("Running tests and evaluating system performance...")
-        if run_tests():
-            performance_metrics = evaluate_system_performance()
-            # Implement logic to determine if the changes resulted in improvement
-            return self._is_performance_improved(performance_metrics)
-        return False
+    def _run_tests(self):
+        self.logger.info("Running unit tests...")
+        try:
+            result = subprocess.run(['python', '-m', 'unittest', 'discover', 'tests'], capture_output=True, text=True)
+            if result.returncode == 0:
+                self.logger.info("All tests passed successfully.")
+                return True
+            else:
+                self.logger.error(f"Tests failed. Output: {result.stdout}\nErrors: {result.stderr}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error running tests: {e}")
+            return False
 
     def _is_performance_improved(self, performance_metrics):
         # Implement logic to determine if the system's performance has improved
@@ -135,6 +169,6 @@ Provide the exact code modifications needed, including the file names and line n
         return True  # Placeholder
 
     def _revert_changes(self):
-        self.logger.warning("Tests failed or performance not improved. Reverting changes...")
+        self.logger.warning("Tests failed. Reverting changes...")
         # Implement logic to revert the applied changes
         # This could involve keeping backups of modified files and restoring them

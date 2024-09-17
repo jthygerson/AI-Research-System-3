@@ -24,19 +24,23 @@ class IdeaEvaluator:
             list: List of dictionaries with idea, score, and justification.
         """
         self.logger.info("Evaluating ideas...")
-        scored_ideas = []
-        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-        for idea in ideas:
-            try:
+        try:
+            evaluated_ideas = []
+            for idea in ideas:
                 prompt = (
-                    f"Evaluate the following research idea based on novelty and probability of success on a scale "
-                    f"from 1 to 10 (10 being highest). Provide the score and a brief justification in JSON format.\n\n"
+                    f"Evaluate the following idea on a scale of 1-10 for each of these criteria:\n"
+                    f"1. Potential to improve idea generation quality\n"
+                    f"2. Potential to enhance idea evaluation effectiveness\n"
+                    f"3. Potential to improve experiment design quality\n"
+                    f"4. Potential to increase experiment execution efficiency and accuracy\n"
+                    f"5. Potential to enhance application of research findings\n"
+                    f"6. Potential to improve system reliability and performance\n"
+                    f"7. Potential to enhance benchmark performance on coding tasks\n"
+                    f"8. Potential to improve report quality and comprehensiveness\n"
+                    f"9. Potential to increase log file error-checking accuracy\n"
+                    f"10. Potential to improve error fixing effectiveness\n\n"
                     f"Idea: {idea}\n\n"
-                    f"Example Response:\n"
-                    f"{{\n"
-                    f'  "score": 8,\n'
-                    f'  "justification": "Innovative and feasible."\n'
-                    f"}}"
+                    f"Provide the scores and a brief justification for each criterion."
                 )
                 
                 if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
@@ -69,6 +73,7 @@ class IdeaEvaluator:
 
                 scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
-            except Exception as e:
-                self.logger.error(f"Error evaluating idea '{idea}': {e}")
+            return scored_ideas
+        except Exception as e:
+            self.logger.error(f"Error evaluating idea '{idea}': {e}")
         return scored_ideas

@@ -12,15 +12,18 @@ class ExperimentDesigner:
         self.logger = setup_logger('experiment_design', 'logs/experiment_design.log')
 
     def design_experiment(self, idea):
-        """
-        Designs an experiment based on the best idea.
-        """
         self.logger.info(f"Designing experiment for idea: {idea}")
         try:
             prompt = (
                 f"Design a detailed experiment plan to test the following idea:\n\n{idea}\n\n"
-                "The experiment plan should include objectives, methodology, resources required, "
-                "procedures, and expected outcomes."
+                "The experiment plan should include:\n"
+                "1. Objectives: Clearly state which performance metrics the experiment aims to improve\n"
+                "2. Methodology: Describe the steps to implement and test the idea\n"
+                "3. Resources required: List any additional tools or data needed\n"
+                "4. Procedures: Provide a step-by-step guide for conducting the experiment\n"
+                "5. Expected outcomes: Describe the anticipated improvements in specific performance metrics\n"
+                "6. Evaluation criteria: Define how the success of the experiment will be measured\n"
+                "Ensure that the experiment directly addresses one or more of the system's performance metrics."
             )
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
