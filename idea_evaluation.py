@@ -25,7 +25,7 @@ class IdeaEvaluator:
         """
         self.logger.info("Evaluating ideas...")
         scored_ideas = []
-        chat_models = ['gpt-3.5-turbo', 'gpt-4']
+        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
         for idea in ideas:
             try:
                 prompt = (
@@ -39,19 +39,16 @@ class IdeaEvaluator:
                     f"}}"
                 )
                 
-                if self.model_name in chat_models:
-                    messages = [
-                        {"role": "system", "content": "You are an AI research evaluator."},
-                        {"role": "user", "content": prompt}
-                    ]
+                if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
                     response = create_completion(
                         self.model_name,
-                        messages=messages if self.model_name in chat_models else None,
-                        prompt=prompt if self.model_name not in chat_models else None,
+                        messages=[
+                            {"role": "system", "content": "You are an AI research evaluator."},
+                            {"role": "user", "content": prompt}
+                        ],
                         max_tokens=1000,
                         temperature=0.7
                     )
-                    # Use the response directly, no need for parsing
                 else:
                     response = create_completion(
                         self.model_name,
@@ -59,18 +56,17 @@ class IdeaEvaluator:
                         max_tokens=1000,
                         temperature=0.7
                     )
-                    # Use the response directly, no need for parsing
                 
                 # Parse JSON response
                 try:
-                    evaluation_json = json.loads(evaluation)
+                    evaluation_json = json.loads(response)
                     score = evaluation_json.get('score', 0)
                     justification = evaluation_json.get('justification', '')
                 except json.JSONDecodeError:
                     self.logger.error(f"Failed to parse evaluation response as JSON for idea '{idea}'.")
                     score = 0
                     justification = ''
-    
+
                 scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
             except Exception as e:

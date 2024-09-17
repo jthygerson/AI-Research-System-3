@@ -21,15 +21,16 @@ class ExperimentExecutor:
                 f"Execute the following experiment plan step by step and report the outcomes of each step:\n\n{experiment_plan}"
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4']
-            if self.model_name in chat_models:
-                messages = [
-                    {"role": "system", "content": "You are an AI experiment executor."},
-                    {"role": "user", "content": prompt}
-                ]
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
+            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+            
+            if is_chat_model:
                 response = create_completion(
                     self.model_name,
-                    messages=messages,
+                    messages=[
+                        {"role": "system", "content": "You are an AI experiment executor."},
+                        {"role": "user", "content": prompt}
+                    ],
                     max_tokens=1000,
                     temperature=0.7,
                 )

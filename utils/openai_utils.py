@@ -16,33 +16,37 @@ def create_completion(model_name, **kwargs):
         **kwargs: Additional keyword arguments to pass to the OpenAI API.
 
     Returns:
-        dict: The response from the OpenAI API.
+        str: The generated text response.
 
     Raises:
         ValueError: If required parameters are missing based on the model type.
     """
     client = openai.OpenAI()
     
-    chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']
+    chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
     is_chat_model = any(model_name.lower().startswith(model.lower()) for model in chat_models)
 
-    if is_chat_model:
-        messages = kwargs.pop('messages', None)
-        if not messages:
-            raise ValueError("Chat models require 'messages' instead of 'prompt'.")
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            **kwargs
-        )
-        return response.choices[0].message.content.strip()
-    else:
-        prompt = kwargs.pop('prompt', None)
-        if not prompt:
-            raise ValueError("Completion models require a 'prompt' string.")
-        response = client.completions.create(
-            model=model_name,
-            prompt=prompt,
-            **kwargs
-        )
-        return response.choices[0].text.strip()
+    try:
+        if is_chat_model:
+            messages = kwargs.pop('messages', None)
+            if not messages:
+                raise ValueError("Chat models require 'messages' parameter.")
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                **kwargs
+            )
+            return response.choices[0].message.content.strip()
+        else:
+            prompt = kwargs.pop('prompt', None)
+            if not prompt:
+                raise ValueError("Completion models require 'prompt' parameter.")
+            response = client.completions.create(
+                model=model_name,
+                prompt=prompt,
+                **kwargs
+            )
+            return response.choices[0].text.strip()
+    except Exception as e:
+        logger.error(f"Error in create_completion: {str(e)}")
+        raise

@@ -12,9 +12,6 @@ class LogErrorChecker:
         self.logger = setup_logger('log_error_checker', 'logs/log_error_checker.log')
 
     def check_logs(self, log_file_path):
-        """
-        Parses the log file using an LLM to find any errors or warnings.
-        """
         self.logger.info(f"Checking logs for errors and warnings in {log_file_path}")
         try:
             with open(log_file_path, 'r') as log_file:
@@ -25,19 +22,19 @@ class LogErrorChecker:
                 f"Provide a list of issues found and suggest possible fixes.\n\n{log_contents}"
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4']
-            if self.model_name in chat_models:
-                messages = [
-                    {"role": "system", "content": "You are a system log analyzer."},
-                    {"role": "user", "content": prompt}
-                ]
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
+            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+            
+            if is_chat_model:
                 response = create_completion(
                     self.model_name,
-                    messages=messages,
+                    messages=[
+                        {"role": "system", "content": "You are a system log analyzer."},
+                        {"role": "user", "content": prompt}
+                    ],
                     max_tokens=1000,
                     temperature=0.5,
                 )
-                analysis = response['choices'][0]['message']['content'].strip()
             else:
                 response = create_completion(
                     self.model_name,
@@ -45,10 +42,9 @@ class LogErrorChecker:
                     max_tokens=1000,
                     temperature=0.5,
                 )
-                analysis = response['choices'][0]['text'].strip()
             
-            self.logger.info(f"Log analysis results: {analysis}")
-            return analysis
+            self.logger.info(f"Log analysis results: {response}")
+            return response
         except Exception as e:
             self.logger.error(f"Error checking logs: {e}")
             return ""

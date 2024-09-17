@@ -13,9 +13,6 @@ class FeedbackLoop:
         self.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log')
 
     def refine_experiment(self, experiment_plan, initial_results):
-        """
-        Updates the experiment plan based on initial outcomes.
-        """
         self.logger.info("Refining experiment plan based on initial results...")
         refined_plan = experiment_plan
         try:
@@ -25,19 +22,19 @@ class FeedbackLoop:
                     f"Refine the experiment plan to improve outcomes. Provide the updated experiment plan."
                 )
                 
-                chat_models = ['gpt-3.5-turbo', 'gpt-4']
-                if self.model_name in chat_models:
+                chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
+                is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+                
+                if is_chat_model:
                     response = create_completion(
                         self.model_name,
                         messages=[
                             {"role": "system", "content": "You are an AI research assistant."},
                             {"role": "user", "content": prompt}
-                        ] if self.model_name in chat_models else None,
-                        prompt=prompt if self.model_name not in chat_models else None,
+                        ],
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    new_refined_plan = response
                 else:
                     response = create_completion(
                         self.model_name,
@@ -45,15 +42,13 @@ class FeedbackLoop:
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    # Use the response directly, no need for ['choices'][0]['message']['content'] or ['choices'][0]['text']
                 
                 self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {response}")
 
-                # Decide whether to continue refining
                 if self.should_continue_refinement(refined_plan, response):
                     refined_plan = response
                 else:
-                    break  # Exit if no significant improvement
+                    break
 
             return refined_plan
         except Exception as e:
