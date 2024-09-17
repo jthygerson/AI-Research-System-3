@@ -30,8 +30,7 @@ class SystemAugmentor:
                 ]
                 response = create_completion(
                     self.model_name,
-                    messages=messages if self.model_name in chat_models else None,
-                    prompt=prompt if self.model_name not in chat_models else None,
+                    messages=messages,
                     max_tokens=1000,
                     temperature=0.7,
                 )
