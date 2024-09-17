@@ -35,7 +35,7 @@ class ExperimentDesigner:
                     max_tokens=1000,
                     temperature=0.7,
                 )
-                experiment_plan = response['choices'][0]['message']['content'].strip()
+                # Use the response directly, no need for ['choices'][0]['message']['content'] or ['choices'][0]['text']
             else:
                 response = create_completion(
                     self.model_name,
@@ -43,10 +43,10 @@ class ExperimentDesigner:
                     max_tokens=1000,
                     temperature=0.7,
                 )
-                experiment_plan = response['choices'][0]['text'].strip()
+                # Use the response directly, no need for ['choices'][0]['message']['content'] or ['choices'][0]['text']
             
-            self.logger.info(f"Experiment plan: {experiment_plan}")
-            return experiment_plan
+            self.logger.info(f"Experiment plan: {response}")
+            return response
         except Exception as e:
             self.logger.error(f"Error designing experiment: {e}")
             return ""

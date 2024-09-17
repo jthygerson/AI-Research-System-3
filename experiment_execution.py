@@ -33,7 +33,6 @@ class ExperimentExecutor:
                     max_tokens=1000,
                     temperature=0.7,
                 )
-                execution_results = response['choices'][0]['message']['content'].strip()
             else:
                 response = create_completion(
                     self.model_name,
@@ -41,10 +40,9 @@ class ExperimentExecutor:
                     max_tokens=1000,
                     temperature=0.7,
                 )
-                execution_results = response['choices'][0]['text'].strip()
             
-            self.logger.info(f"Experiment execution results: {execution_results}")
-            return execution_results
+            self.logger.info(f"Experiment execution results: {response}")
+            return response
         except Exception as e:
             self.logger.error(f"Error executing experiment: {e}")
             return ""

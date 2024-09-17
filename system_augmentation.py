@@ -30,24 +30,23 @@ class SystemAugmentor:
                 ]
                 response = create_completion(
                     self.model_name,
-                    messages=messages,
-                    max_tokens=1500,
+                    messages=messages if self.model_name in chat_models else None,
+                    prompt=prompt if self.model_name not in chat_models else None,
+                    max_tokens=1000,
                     temperature=0.7,
                 )
-                code_modifications = response['choices'][0]['message']['content'].strip()
             else:
                 response = create_completion(
                     self.model_name,
                     prompt=prompt,
-                    max_tokens=1500,
+                    max_tokens=1000,
                     temperature=0.7,
                 )
-                code_modifications = response['choices'][0]['text'].strip()
             
-            self.logger.info(f"Code modifications suggested: {code_modifications}")
+            self.logger.info(f"Code modifications suggested: {response}")
 
             # Apply the code modifications
-            self.apply_code_modifications(code_modifications)
+            self.apply_code_modifications(response)
         except Exception as e:
             self.logger.error(f"Error augmenting system: {e}")
 

@@ -25,34 +25,28 @@ class IdeaGenerator:
             )
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']  # Ensure all chat models are recognized
-            if self.model_name.lower().startswith(tuple([model.lower() for model in chat_models])):
-                messages = [
-                    {"role": "system", "content": "You are an AI research assistant."},
-                    {"role": "user", "content": prompt}
-                ]
-                response = create_completion(
+            if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
+                ideas_text = create_completion(
                     self.model_name,
-                    messages=messages,
+                    messages=[
+                        {"role": "system", "content": "You are an AI research assistant."},
+                        {"role": "user", "content": prompt}
+                    ] if any(self.model_name.lower().startswith(model.lower()) for model in chat_models) else None,
+                    prompt=prompt if not any(self.model_name.lower().startswith(model.lower()) for model in chat_models) else None,
                     max_tokens=150 * self.num_ideas,
                     temperature=0.7
                 )
-                ideas_text = response['choices'][0]['message']['content'].strip()
             else:
-                response = create_completion(
+                ideas_text = create_completion(
                     self.model_name,
                     prompt=prompt,
                     max_tokens=150 * self.num_ideas,
                     temperature=0.7
                 )
-                ideas_text = response['choices'][0]['text'].strip()
             
-            # Split ideas into a list
-            ideas = ideas_text.split('\n')
-            # Clean up ideas
-            ideas = [idea.strip('- ').strip() for idea in ideas if idea.strip()]
-            if len(ideas) > self.num_ideas:
-                ideas = ideas[:self.num_ideas]
-            self.logger.info(f"Generated ideas: {ideas}")
+            # Process ideas_text to extract individual ideas
+            ideas = [idea.strip() for idea in ideas_text.split('\n') if idea.strip()]
+            self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
         except Exception as e:
             self.logger.error(f"Error generating ideas: {e}")

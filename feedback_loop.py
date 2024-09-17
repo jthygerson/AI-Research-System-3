@@ -27,17 +27,17 @@ class FeedbackLoop:
                 
                 chat_models = ['gpt-3.5-turbo', 'gpt-4']
                 if self.model_name in chat_models:
-                    messages = [
-                        {"role": "system", "content": "You are an AI research assistant."},
-                        {"role": "user", "content": prompt}
-                    ]
                     response = create_completion(
                         self.model_name,
-                        messages=messages,
+                        messages=[
+                            {"role": "system", "content": "You are an AI research assistant."},
+                            {"role": "user", "content": prompt}
+                        ] if self.model_name in chat_models else None,
+                        prompt=prompt if self.model_name not in chat_models else None,
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    new_refined_plan = response['choices'][0]['message']['content'].strip()
+                    new_refined_plan = response
                 else:
                     response = create_completion(
                         self.model_name,
@@ -45,13 +45,13 @@ class FeedbackLoop:
                         max_tokens=1000,
                         temperature=0.7,
                     )
-                    new_refined_plan = response['choices'][0]['text'].strip()
+                    # Use the response directly, no need for ['choices'][0]['message']['content'] or ['choices'][0]['text']
                 
-                self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {new_refined_plan}")
+                self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {response}")
 
                 # Decide whether to continue refining
-                if self.should_continue_refinement(refined_plan, new_refined_plan):
-                    refined_plan = new_refined_plan
+                if self.should_continue_refinement(refined_plan, response):
+                    refined_plan = response
                 else:
                     break  # Exit if no significant improvement
 

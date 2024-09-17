@@ -1,7 +1,6 @@
 # utils/config.py
 
 import os
-import openai
 from dotenv import load_dotenv
 import logging
 
@@ -22,5 +21,5 @@ def initialize_openai():
         error_msg = "The OPENAI_API_KEY environment variable is not set."
         logger.error(error_msg)
         raise ValueError(error_msg)
-    openai.api_key = api_key
+    # No need to set openai.api_key here, as it will be handled by the OpenAI client
     logger.debug("OpenAI API key initialized successfully.")

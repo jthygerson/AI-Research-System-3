@@ -46,19 +46,20 @@ class IdeaEvaluator:
                     ]
                     response = create_completion(
                         self.model_name,
-                        messages=messages,
-                        max_tokens=150,
-                        temperature=0.5
+                        messages=messages if self.model_name in chat_models else None,
+                        prompt=prompt if self.model_name not in chat_models else None,
+                        max_tokens=1000,
+                        temperature=0.7
                     )
-                    evaluation = response['choices'][0]['message']['content'].strip()
+                    # Use the response directly, no need for parsing
                 else:
                     response = create_completion(
                         self.model_name,
                         prompt=prompt,
-                        max_tokens=150,
-                        temperature=0.5
+                        max_tokens=1000,
+                        temperature=0.7
                     )
-                    evaluation = response['choices'][0]['text'].strip()
+                    # Use the response directly, no need for parsing
                 
                 # Parse JSON response
                 try:
