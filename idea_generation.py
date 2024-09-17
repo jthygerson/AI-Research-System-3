@@ -47,6 +47,7 @@ class IdeaGenerator:
             
             # Process ideas_text to extract individual ideas
             ideas = [idea.strip() for idea in response.split('\n') if idea.strip()]
+            ideas = [idea.lstrip('- ').strip() for idea in ideas]
             self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
         except Exception as e:
