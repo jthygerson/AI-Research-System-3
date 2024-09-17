@@ -22,7 +22,7 @@ class LogErrorChecker:
                 f"Provide a list of issues found and suggest possible fixes.\n\n{log_contents}"
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301']
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
             is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
             
             if is_chat_model:

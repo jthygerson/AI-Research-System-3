@@ -33,7 +33,7 @@ class SystemAugmentor:
                     {"role": "user", "content": prompt}
                 ]
                 response = create_completion(
-                    model=self.model_name,
+                    self.model_name,
                     messages=messages,
                     max_tokens=1000,
                     temperature=0.7,
@@ -41,7 +41,7 @@ class SystemAugmentor:
             else:
                 self.logger.debug("Using non-chat model format")
                 response = create_completion(
-                    model=self.model_name,
+                    self.model_name,
                     prompt=prompt,
                     max_tokens=1000,
                     temperature=0.7,

@@ -29,7 +29,7 @@ def main():
     args = parser.parse_args()
 
     # Define supported models
-    chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']
+    chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
     completion_models = ['text-davinci-003', 'text-curie-001', 'text-babbage-001', 'text-ada-001']  # Add more if needed
     supported_models = chat_models + completion_models
 
