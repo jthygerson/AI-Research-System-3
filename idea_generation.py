@@ -24,20 +24,21 @@ class IdeaGenerator:
                 "Each idea should be concise and clear."
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']  # Ensure all chat models are recognized
-            if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
-                ideas_text = create_completion(
+            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o mini', 'o1-preview', 'o1-mini']
+            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+            
+            if is_chat_model:
+                response = create_completion(
                     self.model_name,
                     messages=[
                         {"role": "system", "content": "You are an AI research assistant."},
                         {"role": "user", "content": prompt}
-                    ] if any(self.model_name.lower().startswith(model.lower()) for model in chat_models) else None,
-                    prompt=prompt if not any(self.model_name.lower().startswith(model.lower()) for model in chat_models) else None,
+                    ],
                     max_tokens=150 * self.num_ideas,
                     temperature=0.7
                 )
             else:
-                ideas_text = create_completion(
+                response = create_completion(
                     self.model_name,
                     prompt=prompt,
                     max_tokens=150 * self.num_ideas,
@@ -45,9 +46,9 @@ class IdeaGenerator:
                 )
             
             # Process ideas_text to extract individual ideas
-            ideas = [idea.strip() for idea in ideas_text.split('\n') if idea.strip()]
+            ideas = [idea.strip() for idea in response.split('\n') if idea.strip()]
             self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
         except Exception as e:
-            self.logger.error(f"Error generating ideas: {e}")
+            self.logger.error(f"Error generating ideas: {str(e)}")
             return []
