@@ -23,20 +23,25 @@ class SystemAugmentor:
                 "Provide the exact code modifications needed, including the file names and line numbers."
             )
             chat_models = ['gpt-3.5-turbo', 'gpt-4']
+            
+            self.logger.debug(f"Using model: {self.model_name}")
+            
             if self.model_name in chat_models:
+                self.logger.debug("Using chat model format")
                 messages = [
                     {"role": "system", "content": "You are an AI research assistant."},
                     {"role": "user", "content": prompt}
                 ]
                 response = create_completion(
-                    self.model_name,
+                    model=self.model_name,
                     messages=messages,
                     max_tokens=1000,
                     temperature=0.7,
                 )
             else:
+                self.logger.debug("Using non-chat model format")
                 response = create_completion(
-                    self.model_name,
+                    model=self.model_name,
                     prompt=prompt,
                     max_tokens=1000,
                     temperature=0.7,
@@ -47,7 +52,7 @@ class SystemAugmentor:
             # Apply the code modifications
             self.apply_code_modifications(response)
         except Exception as e:
-            self.logger.error(f"Error augmenting system: {e}")
+            self.logger.error(f"Error augmenting system: {e}", exc_info=True)
 
     def apply_code_modifications(self, code_modifications):
         """
