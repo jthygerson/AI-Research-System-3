@@ -6,7 +6,6 @@ import astor
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
-from utils.testing import run_tests
 from utils.metrics import evaluate_system_performance
 
 class SystemAugmentor:
