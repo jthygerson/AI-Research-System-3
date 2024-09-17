@@ -71,9 +71,9 @@ class IdeaEvaluator:
                     score = 0
                     justification = ''
 
-                scored_ideas.append({'idea': idea, 'score': score, 'justification': justification})
+                evaluated_ideas.append({'idea': idea, 'score': score, 'justification': justification})
                 self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
-            return scored_ideas
+            return evaluated_ideas
         except Exception as e:
             self.logger.error(f"Error evaluating idea '{idea}': {e}")
-        return scored_ideas
+        return evaluated_ideas
