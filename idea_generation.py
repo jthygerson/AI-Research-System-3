@@ -81,7 +81,7 @@ class IdeaGenerator:
                 # If it's not JSON, try to parse the text response
                 ideas = self.parse_text_response(response)
 
-            self.logger.info(f"Generated {len(ideas)} ideas")
+            self.logger.debug(f"Generated ideas: {ideas}")
             if not ideas:
                 self.logger.warning("No ideas were generated")
             return ideas

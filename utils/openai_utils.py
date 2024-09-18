@@ -13,11 +13,11 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
 client = openai.OpenAI()
 
 def create_completion(model, messages=None, prompt=None, max_tokens=100, temperature=0.7):
-    logger.info(f"Creating completion with model: {model}")
-    logger.info(f"Messages: {messages}")
-    logger.info(f"Prompt: {prompt}")
-    logger.info(f"Max tokens: {max_tokens}")
-    logger.info(f"Temperature: {temperature}")
+    logger.debug(f"Creating completion with model: {model}")
+    logger.debug(f"Messages: {messages}")
+    logger.debug(f"Prompt: {prompt}")
+    logger.debug(f"Max tokens: {max_tokens}")
+    logger.debug(f"Temperature: {temperature}")
     try:
         if messages:
             response = client.chat.completions.create(
