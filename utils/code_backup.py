@@ -25,24 +25,29 @@ def backup_code(source_dir, backup_dir):
 
 def restore_code(backup_path, source_dir):
     """
-    Restores the code from the backup directory.
+    Restores the code from the backup directory while preserving .git and other important files/directories.
     """
     try:
-        # Remove current code except backup and logs
+        # List of items to preserve
+        preserve = ['.git', 'code_backups', 'logs', 'reports', 'venv', 'requirements.txt', 'readme.txt']
+
+        # Remove current code except preserved items
         for item in os.listdir(source_dir):
-            if item not in ['code_backups', 'logs', 'reports', 'venv', 'requirements.txt', 'readme.txt']:
+            if item not in preserve:
                 item_path = os.path.join(source_dir, item)
                 if os.path.isfile(item_path):
                     os.remove(item_path)
                 elif os.path.isdir(item_path):
                     shutil.rmtree(item_path)
+
         # Copy backup code to source directory
         for item in os.listdir(backup_path):
             s = os.path.join(backup_path, item)
             d = os.path.join(source_dir, item)
-            if os.path.isdir(s):
-                shutil.copytree(s, d, dirs_exist_ok=True)
-            else:
-                shutil.copy2(s, d)
+            if item not in preserve:
+                if os.path.isdir(s):
+                    shutil.copytree(s, d, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(s, d)
     except Exception as e:
         print(f"Error restoring code: {e}")
