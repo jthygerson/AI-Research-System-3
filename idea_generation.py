@@ -40,7 +40,8 @@ class IdeaGenerator:
                     "Log file error-checking accuracy",
                     "Effectiveness of error fixing"
                 ],
-                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects."
+                "output_format": "JSON",
+                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output in JSON format."
             }
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
@@ -70,20 +71,31 @@ class IdeaGenerator:
             
             self.logger.info(f"Raw API response: {response}")
             
-            # Parse the JSON response
-            ideas_data = json.loads(response)
-            ideas = ideas_data.get('ideas', [])
-            
+            # Check if the response is a JSON string
+            try:
+                ideas_data = json.loads(response)
+                ideas = ideas_data.get('ideas', [])
+            except json.JSONDecodeError:
+                # If it's not JSON, try to parse the text response
+                ideas = self.parse_text_response(response)
+
             self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Error decoding JSON response: {str(e)}")
-            self.logger.error(f"Raw response causing the error: {response}")
-            return []
-        except openai.OpenAIError as e:
-            self.logger.error(f"OpenAI API error: {str(e)}")
-            return []
         except Exception as e:
             self.logger.error(f"Error generating ideas: {str(e)}")
             self.logger.error(traceback.format_exc())
             return []
+
+    def parse_text_response(self, response):
+        ideas = []
+        current_idea = ""
+        for line in response.split('\n'):
+            if line.strip().startswith("### Idea"):
+                if current_idea:
+                    ideas.append(current_idea.strip())
+                current_idea = line + "\n"
+            else:
+                current_idea += line + "\n"
+        if current_idea:
+            ideas.append(current_idea.strip())
+        return ideas

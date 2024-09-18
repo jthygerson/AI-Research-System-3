@@ -54,7 +54,8 @@ class IdeaEvaluator:
                         "Potential to increase log file error-checking accuracy",
                         "Potential to improve error fixing effectiveness"
                     ],
-                    "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score."
+                    "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score.",
+                    "output_format": "JSON"
                 }
 
                 self.logger.info(f"Evaluating idea: {idea}")
@@ -84,63 +85,45 @@ class IdeaEvaluator:
                 
                 self.logger.info(f"Raw API response for idea '{idea}': {response}")
 
-                # Parse JSON response
+                # Parse response
                 try:
                     evaluation_data = json.loads(response)
                     scores = [evaluation_data[f'criterion_{i+1}']['score'] for i in range(10)]
                     justifications = {f'criterion_{i+1}': evaluation_data[f'criterion_{i+1}']['justification'] for i in range(10)}
-                    
-                    average_score = sum(scores) / len(scores)
-                    
-                    evaluated_idea = {
-                        'idea': idea, 
-                        'score': round(average_score, 2),
-                        'justifications': justifications
-                    }
-                    evaluated_ideas.append(evaluated_idea)
-                    
-                    # Print the idea and its score to the terminal
-                    print(f"Idea: {idea}")
-                    print(f"Score: {evaluated_idea['score']}")
-                    print("-" * 50)  # Separator for readability
-                    
-                    self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
-                except json.JSONDecodeError as e:
-                    self.logger.error(f"Failed to parse evaluation response for idea '{idea}': {e}")
-                    self.logger.error(f"Raw response causing the error: {response}")
-                    evaluated_idea = {
-                        'idea': idea, 
-                        'score': 1,  # Lowest possible score as a fallback
-                        'justifications': {'error': f'Failed to parse response: {str(e)}'}
-                    }
-                    evaluated_ideas.append(evaluated_idea)
-                    
-                    # Print the idea and its score to the terminal (error case)
-                    print(f"Idea: {idea}")
-                    print(f"Score: {evaluated_idea['score']} (Error in evaluation)")
-                    print("-" * 50)  # Separator for readability
-                    
-                except openai.OpenAIError as e:
-                    self.logger.error(f"OpenAI API error for idea '{idea}': {str(e)}")
-                    evaluated_idea = {
-                        'idea': idea, 
-                        'score': 1,  # Lowest possible score as a fallback
-                        'justifications': {'error': f'OpenAI API error: {str(e)}'}
-                    }
-                    evaluated_ideas.append(evaluated_idea)
-                    
-                    # Print the idea and its score to the terminal (error case)
-                    print(f"Idea: {idea}")
-                    print(f"Score: {evaluated_idea['score']} (OpenAI API error)")
-                    print("-" * 50)  # Separator for readability
-                    
-                idea_end_time = time.time()
-                self.logger.info(f"Time to evaluate idea: {idea_end_time - idea_start_time:.2f} seconds")
-            end_time = time.time()
-            self.logger.info(f"Total evaluation time: {end_time - start_time:.2f} seconds")
-        
-            return evaluated_ideas
+                except json.JSONDecodeError:
+                    # If it's not JSON, try to parse the text response
+                    scores, justifications = self.parse_text_evaluation(response)
+
+                average_score = sum(scores) / len(scores)
+
+                evaluated_idea = {
+                    'idea': idea, 
+                    'score': round(average_score, 2),
+                    'justifications': justifications
+                }
+                evaluated_ideas.append(evaluated_idea)
+                
+                # Print the idea and its score to the terminal
+                print(f"Idea: {idea}")
+                print(f"Score: {evaluated_idea['score']}")
+                print("-" * 50)  # Separator for readability
+                
+                self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
         except Exception as e:
             self.logger.error(f"Error evaluating ideas: {str(e)}")
             self.logger.error(traceback.format_exc())  # Log the full traceback for debugging
         return []
+
+    def parse_text_evaluation(self, response):
+        scores = []
+        justifications = {}
+        current_criterion = ""
+        for line in response.split('\n'):
+            if line.strip().startswith("Criterion"):
+                current_criterion = line.strip().split(':')[0]
+                score_match = re.search(r'Score: (\d+)', line)
+                if score_match:
+                    scores.append(int(score_match.group(1)))
+            elif line.strip().startswith("Justification:"):
+                justifications[current_criterion] = line.strip()[14:]
+        return scores, justifications
