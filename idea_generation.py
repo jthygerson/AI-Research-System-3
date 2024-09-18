@@ -48,7 +48,7 @@ class IdeaGenerator:
                 "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output as a valid JSON object with a 'research_ideas' key containing an array of idea objects, each with a 'description' field. Do not include any text outside of the JSON object."
             }
 
-            print(f"\nPrompt sent to API:\n{json.dumps(prompt, indent=2)}")
+            self.debug_logger.info(f"\nPrompt sent to API:\n{json.dumps(prompt, indent=2)}")
 
             response = create_completion(
                 self.model_name,
@@ -60,7 +60,7 @@ class IdeaGenerator:
                 temperature=0.7
             )
             
-            print(f"\nRaw API response:\n{response}")
+            self.debug_logger.info(f"\nRaw API response:\n{response}")
             
             parsed_response = parse_llm_response(response)
             if parsed_response:

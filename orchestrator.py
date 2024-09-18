@@ -87,14 +87,14 @@ def main():
         all_idea_hashes = set()
 
         for experiment_run in range(args.num_experiments):
-            print(f"\n--- Experiment Run {experiment_run + 1} ---")
+            debug_logger.info(f"\n--- Experiment Run {experiment_run + 1} ---")
             
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             generated_ideas = idea_generator.generate_ideas()
             
-            print(f"Generated {len(generated_ideas)} ideas:")
+            debug_logger.info(f"Generated {len(generated_ideas)} ideas:")
             for i, idea in enumerate(generated_ideas, 1):
-                print(f"Idea {i}: {idea[:50]}...")  # Print first 50 characters of each idea
+                debug_logger.info(f"Idea {i}: {idea[:50]}...")  # Log first 50 characters of each idea
 
             # Log OpenAI API calls
             debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(api_call_history)}")
