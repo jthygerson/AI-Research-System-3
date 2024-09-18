@@ -17,7 +17,7 @@ class IdeaGenerator:
             IdeaGenerator.openai_initialized = True
         self.model_name = model_name
         self.num_ideas = num_ideas
-        self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', log_to_console=False)
+        self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.ERROR)
 
     def generate_ideas(self):
         """
