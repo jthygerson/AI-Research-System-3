@@ -25,21 +25,10 @@ class IdeaEvaluator:
     def evaluate_ideas(self, ideas):
         """
         Evaluates ideas based on multiple criteria.
-
-        Parameters:
-            ideas (list): List of idea strings to evaluate.
-
-        Returns:
-            list: List of dictionaries with idea, score, and justifications.
         """
         self.logger.debug("Evaluating ideas...")
         scored_ideas = []
-        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-        is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
         
-        self.logger.debug(f"Calling OpenAI API with model: {self.model_name}")
-        self.logger.debug(f"Is chat model: {is_chat_model}")
-
         for idea in ideas:
             try:
                 prompt = {
@@ -57,48 +46,26 @@ class IdeaEvaluator:
                         "Potential to increase log file error-checking accuracy",
                         "Potential to improve error fixing effectiveness"
                     ],
-                    "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score.",
+                    "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score. Return the result as a JSON object with 'scores' and 'justifications' keys.",
                     "output_format": "JSON"
                 }
 
-                self.logger.debug(f"Evaluating idea: {idea}")
-                self.logger.debug(f"Prompt: {json.dumps(prompt, indent=2)}")
-
-                if is_chat_model:
-                    response = create_completion(
-                        self.model_name,
-                        messages=[
-                            {"role": "system", "content": "You are an AI research evaluator."},
-                            {"role": "user", "content": json.dumps(prompt)}
-                        ],
-                        max_tokens=1000,
-                        temperature=0.7
-                    )
-                else:
-                    response = create_completion(
-                        self.model_name,
-                        prompt=json.dumps(prompt),
-                        max_tokens=1000,
-                        temperature=0.7
-                    )
+                response = create_completion(
+                    self.model_name,
+                    messages=[
+                        {"role": "system", "content": "You are an AI research evaluator."},
+                        {"role": "user", "content": json.dumps(prompt)}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.7
+                )
                 
                 self.logger.debug(f"Raw API response for idea '{idea}': {response}")
 
-                # Parse response
                 try:
-                    cleaned_response = response.strip()
-                    if cleaned_response.startswith("```json"):
-                        cleaned_response = cleaned_response[7:]  # Remove ```json
-                    if cleaned_response.endswith("```"):
-                        cleaned_response = cleaned_response[:-3]  # Remove closing ```
-                    
-                    evaluation_data = json.loads(cleaned_response)
-                    scores = []
-                    justifications = {}
-                    for i, criterion in enumerate(prompt['criteria'], 1):
-                        criterion_data = evaluation_data.get(f'criterion_{i}', {})
-                        scores.append(criterion_data.get('score', 0))
-                        justifications[f'criterion_{i}'] = criterion_data.get('justification', '')
+                    evaluation_data = json.loads(response)
+                    scores = evaluation_data.get('scores', [])
+                    justifications = evaluation_data.get('justifications', {})
                 except json.JSONDecodeError:
                     self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                     scores, justifications = self.parse_text_evaluation(response)

@@ -17,42 +17,39 @@ class FeedbackLoop:
         refined_plan = experiment_plan
         try:
             for iteration in range(self.max_iterations):
-                prompt = (
-                    f"Based on the following initial experiment results:\n\n{initial_results}\n\n"
-                    f"Refine the experiment plan to improve outcomes. Provide the updated experiment plan."
+                prompt = {
+                    "task": "refine_experiment",
+                    "initial_results": initial_results,
+                    "current_plan": refined_plan,
+                    "instructions": "Refine the experiment plan to improve outcomes based on the initial results. Provide the updated experiment plan in the same format as the current plan.",
+                    "output_format": "JSON"
+                }
+                
+                response = create_completion(
+                    self.model_name,
+                    messages=[
+                        {"role": "system", "content": "You are an AI research assistant specializing in experiment refinement."},
+                        {"role": "user", "content": json.dumps(prompt)}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.7,
                 )
-                
-                chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-                is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
-                
-                if is_chat_model:
-                    response = create_completion(
-                        self.model_name,
-                        messages=[
-                            {"role": "system", "content": "You are an AI research assistant."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=1000,
-                        temperature=0.7,
-                    )
-                else:
-                    response = create_completion(
-                        self.model_name,
-                        prompt=prompt,
-                        max_tokens=1000,
-                        temperature=0.7,
-                    )
                 
                 self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {response}")
 
-                if self.should_continue_refinement(refined_plan, response):
-                    refined_plan = response
-                else:
-                    break
+                try:
+                    new_plan = json.loads(response)
+                    if self.should_continue_refinement(refined_plan, new_plan):
+                        refined_plan = new_plan
+                    else:
+                        break
+                except json.JSONDecodeError:
+                    self.logger.warning("Failed to parse JSON response. Skipping this iteration.")
 
             return refined_plan
         except Exception as e:
-            self.logger.error(f"Error refining experiment plan: {e}")
+            self.logger.error(f"Error refining experiment: {str(e)}")
+            self.logger.error(traceback.format_exc())
             return experiment_plan
 
     def should_continue_refinement(self, old_plan, new_plan):

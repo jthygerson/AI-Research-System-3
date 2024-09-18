@@ -63,7 +63,7 @@ def main():
             main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
 
             best_idea = None
-            max_rounds = 10
+            max_rounds = 3
             for round in range(max_rounds):
                 main_logger.info(f"Idea generation round {round + 1}/{max_rounds}")
                 
@@ -94,7 +94,7 @@ def main():
                     best_idea = round_best_idea
 
             if best_idea is None:
-                main_logger.warning("Failed to generate any valid ideas after 10 rounds. Skipping this experiment run.")
+                main_logger.warning("Failed to generate any valid ideas after 3 rounds. Skipping this experiment run.")
                 continue
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")

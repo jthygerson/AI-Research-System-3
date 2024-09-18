@@ -39,20 +39,25 @@ class SystemAugmentor:
         recent_ideas = self._get_recent_ideas(n=10)  # Get last 10 ideas
         
         # Use the AI model to evaluate each idea
-        prompt = (
-            "Rate the following research idea on a scale of 0 to 10 based on novelty, feasibility, and potential impact:\n\n"
-            "{idea}\n\n"
-            "Provide a single numeric score."
-        )
+        prompt = {
+            "task": "evaluate_ideas",
+            "ideas": recent_ideas,
+            "criteria": [
+                "Novelty",
+                "Feasibility",
+                "Potential impact"
+            ],
+            "instructions": "Evaluate each idea on a scale of 0 to 10 based on the given criteria. Provide a single numeric score for each idea.",
+            "output_format": "JSON"
+        }
         
-        scores = []
-        for idea in recent_ideas:
-            response = self._get_model_response(prompt.format(idea=idea))
-            try:
-                score = float(response.strip()) / 10  # Convert to 0-1 scale
-                scores.append(score)
-            except ValueError:
-                self.logger.warning(f"Invalid score response: {response}")
+        response = self._get_model_response(prompt)
+        try:
+            scores = json.loads(response)
+            scores = [score / 10 for score in scores]  # Convert to 0-1 scale
+        except json.JSONDecodeError:
+            self.logger.warning(f"Invalid JSON response: {response}")
+            scores = []
         
         return sum(scores) / len(scores) if scores else 0.0
 
@@ -67,20 +72,25 @@ class SystemAugmentor:
     def _benchmark_experiment_design(self) -> float:
         recent_designs = self._get_recent_experiment_designs(n=5)
         
-        prompt = (
-            "Rate the following experiment design on a scale of 0 to 10 based on clarity, feasibility, and potential to yield meaningful results:\n\n"
-            "{design}\n\n"
-            "Provide a single numeric score."
-        )
+        prompt = {
+            "task": "evaluate_experiment_designs",
+            "designs": recent_designs,
+            "criteria": [
+                "Clarity",
+                "Feasibility",
+                "Potential to yield meaningful results"
+            ],
+            "instructions": "Evaluate each experiment design on a scale of 0 to 10 based on the given criteria. Provide a single numeric score for each design.",
+            "output_format": "JSON"
+        }
         
-        scores = []
-        for design in recent_designs:
-            response = self._get_model_response(prompt.format(design=design))
-            try:
-                score = float(response.strip()) / 10
-                scores.append(score)
-            except ValueError:
-                self.logger.warning(f"Invalid score response: {response}")
+        response = self._get_model_response(prompt)
+        try:
+            scores = json.loads(response)
+            scores = [score / 10 for score in scores]
+        except json.JSONDecodeError:
+            self.logger.warning(f"Invalid JSON response: {response}")
+            scores = []
         
         return sum(scores) / len(scores) if scores else 0.0
 
@@ -100,20 +110,24 @@ class SystemAugmentor:
     def _benchmark_research_application(self) -> float:
         recent_applications = self._get_recent_research_applications(n=5)
         
-        prompt = (
-            "Rate the following application of research findings on a scale of 0 to 10 based on creativity and effectiveness:\n\n"
-            "{application}\n\n"
-            "Provide a single numeric score."
-        )
+        prompt = {
+            "task": "evaluate_research_applications",
+            "applications": recent_applications,
+            "criteria": [
+                "Creativity",
+                "Effectiveness"
+            ],
+            "instructions": "Evaluate each application of research findings on a scale of 0 to 10 based on the given criteria. Provide a single numeric score for each application.",
+            "output_format": "JSON"
+        }
         
-        scores = []
-        for application in recent_applications:
-            response = self._get_model_response(prompt.format(application=application))
-            try:
-                score = float(response.strip()) / 10
-                scores.append(score)
-            except ValueError:
-                self.logger.warning(f"Invalid score response: {response}")
+        response = self._get_model_response(prompt)
+        try:
+            scores = json.loads(response)
+            scores = [score / 10 for score in scores]
+        except json.JSONDecodeError:
+            self.logger.warning(f"Invalid JSON response: {response}")
+            scores = []
         
         return sum(scores) / len(scores) if scores else 0.0
 
@@ -136,20 +150,25 @@ class SystemAugmentor:
     def _benchmark_report_quality(self) -> float:
         recent_reports = self._get_recent_reports(n=3)
         
-        prompt = (
-            "Rate the following research report on a scale of 0 to 10 based on clarity, comprehensiveness, and adherence to report requirements:\n\n"
-            "{report}\n\n"
-            "Provide a single numeric score."
-        )
+        prompt = {
+            "task": "evaluate_reports",
+            "reports": recent_reports,
+            "criteria": [
+                "Clarity",
+                "Comprehensiveness",
+                "Adherence to report requirements"
+            ],
+            "instructions": "Evaluate each report on a scale of 0 to 10 based on the given criteria. Provide a single numeric score for each report.",
+            "output_format": "JSON"
+        }
         
-        scores = []
-        for report in recent_reports:
-            response = self._get_model_response(prompt.format(report=report))
-            try:
-                score = float(response.strip()) / 10
-                scores.append(score)
-            except ValueError:
-                self.logger.warning(f"Invalid score response: {response}")
+        response = self._get_model_response(prompt)
+        try:
+            scores = json.loads(response)
+            scores = [score / 10 for score in scores]
+        except json.JSONDecodeError:
+            self.logger.warning(f"Invalid JSON response: {response}")
+            scores = []
         
         return sum(scores) / len(scores) if scores else 0.0
 
@@ -222,23 +241,12 @@ class SystemAugmentor:
             self.logger.error(f"Error augmenting system: {e}", exc_info=True)
 
     def _generate_augmentation_prompt(self, experiment_results):
-        return f"""Based on the following experiment results:
-
-{experiment_results}
-
-Identify specific improvements that can be made to the AI Research System's code to enhance its performance in the following areas:
-1. Quality of ideas generated
-2. Effectiveness of idea evaluation
-3. Quality of experiment designs
-4. Efficiency and accuracy of experiment executions
-5. Creativeness and precision in applying research findings
-6. System reliability and performance improvement after adjustments
-7. Benchmark performance on difficult coding tasks
-8. Quality and comprehensiveness of reports
-9. Accuracy of log file error-checking
-10. Effectiveness of applied code changes in fixing previous errors
-
-Provide the exact code modifications needed, including the file names and line numbers. Ensure that your suggestions are safe, maintainable, and improve the system's overall performance."""
+        return {
+            "task": "generate_augmentation_prompt",
+            "experiment_results": experiment_results,
+            "instructions": "Based on the given experiment results, identify specific improvements that can be made to the AI Research System's code to enhance its performance in the following areas: 1. Quality of ideas generated, 2. Effectiveness of idea evaluation, 3. Quality of experiment designs, 4. Efficiency and accuracy of experiment executions, 5. Application of research findings, 6. System reliability and performance improvement after adjustments, 7. Benchmark performance on difficult coding tasks, 8. Quality and comprehensiveness of reports, 9. Accuracy of log file error-checking, 10. Effectiveness of applied code changes in fixing previous errors. Provide the exact code modifications needed, including the file names and line numbers. Ensure that your suggestions are safe, maintainable, and improve the system's overall performance.",
+            "output_format": "JSON"
+        }
 
     def _get_model_response(self, prompt):
         """
@@ -246,26 +254,15 @@ Provide the exact code modifications needed, including the file names and line n
         """
         self.logger.debug(f"Using model: {self.model_name}")
         
-        if any(self.model_name.lower().startswith(model.lower()) for model in ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']):
-            self.logger.debug("Using chat model format")
-            messages = [
+        response = create_completion(
+            self.model_name,
+            messages=[
                 {"role": "system", "content": "You are an AI research assistant."},
-                {"role": "user", "content": prompt}
-            ]
-            response = create_completion(
-                self.model_name,
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.7,
-            )
-        else:
-            self.logger.debug("Using non-chat model format")
-            response = create_completion(
-                self.model_name,
-                prompt=prompt,
-                max_tokens=1000,
-                temperature=0.7,
-            )
+                {"role": "user", "content": json.dumps(prompt)}
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+        )
         
         return response
 

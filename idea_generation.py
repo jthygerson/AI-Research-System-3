@@ -42,50 +42,27 @@ class IdeaGenerator:
                     "Effectiveness of error fixing"
                 ],
                 "output_format": "JSON",
-                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output in JSON format."
+                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output in JSON format with a 'research_ideas' key containing an array of idea objects, each with a 'description' field."
             }
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
-            
-            self.logger.debug(f"Calling OpenAI API with model: {self.model_name}")
-            self.logger.debug(f"Is chat model: {is_chat_model}")
-            self.logger.debug(f"Prompt: {json.dumps(prompt, indent=2)}")
-            
-            if is_chat_model:
-                response = create_completion(
-                    self.model_name,
-                    messages=[
-                        {"role": "system", "content": "You are an AI research assistant."},
-                        {"role": "user", "content": json.dumps(prompt)}
-                    ],
-                    max_tokens=150 * self.num_ideas,
-                    temperature=0.7
-                )
-            else:
-                response = create_completion(
-                    self.model_name,
-                    prompt=json.dumps(prompt),
-                    max_tokens=150 * self.num_ideas,
-                    temperature=0.7
-                )
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=150 * self.num_ideas,
+                temperature=0.7
+            )
             
             self.logger.info(f"Raw API response: {response}")
             
-            # New code to handle the JSON response
-            cleaned_response = response.strip()
-            if cleaned_response.startswith("```json"):
-                cleaned_response = cleaned_response[7:]  # Remove ```json
-            if cleaned_response.endswith("```"):
-                cleaned_response = cleaned_response[:-3]  # Remove closing ```
-            
             try:
-                ideas_data = json.loads(cleaned_response)
+                ideas_data = json.loads(response)
                 ideas = ideas_data.get('research_ideas', [])
                 ideas = [idea['description'] for idea in ideas if 'description' in idea]
             except json.JSONDecodeError:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
-                # If it's not JSON, try to parse the text response
                 ideas = self.parse_text_response(response)
 
             self.logger.debug(f"Generated ideas: {ideas}")

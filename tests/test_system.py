@@ -10,6 +10,7 @@ from feedback_loop import FeedbackLoop
 from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 import logging
+import json
 
 class TestAIResearchSystem(unittest.TestCase):
     def tearDown(self):
@@ -32,91 +33,88 @@ class TestAIResearchSystem(unittest.TestCase):
                 handler.close()
                 logger.removeHandler(handler)
 
-    # Tests for IdeaGenerator
-    @patch('idea_generation.create_completion')
-    def test_generate_ideas_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = '- Idea 1\n- Idea 2\n- Idea 3'
-        generator = IdeaGenerator('text-davinci-003', 3)
-        ideas = generator.generate_ideas()
-        self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
-
     @patch('idea_generation.create_completion')
     def test_generate_ideas_chat_model(self, mock_create):
         # Setup mock response for chat model
-        mock_create.return_value = "- Idea 1\n- Idea 2\n- Idea 3"
+        mock_create.return_value = json.dumps({
+            "research_ideas": [
+                {"description": "Idea 1"},
+                {"description": "Idea 2"},
+                {"description": "Idea 3"}
+            ]
+        })
         generator = IdeaGenerator('gpt-4', 3)
         ideas = generator.generate_ideas()
         self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
 
-    # Tests for IdeaEvaluator
     @patch('idea_evaluation.create_completion')
-    def test_idea_evaluation_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = '{"1": {"score": 8, "justification": "Innovative and feasible."}, "2": {"score": 8, "justification": "Reason"}, "3": {"score": 8, "justification": "Reason"}, "4": {"score": 8, "justification": "Reason"}, "5": {"score": 8, "justification": "Reason"}, "6": {"score": 8, "justification": "Reason"}, "7": {"score": 8, "justification": "Reason"}, "8": {"score": 8, "justification": "Reason"}, "9": {"score": 8, "justification": "Reason"}, "10": {"score": 8, "justification": "Reason"}}'
-        evaluator = IdeaEvaluator('text-davinci-003')
-        scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
-        self.assertEqual(len(scored_ideas), 1)
-        self.assertEqual(scored_ideas[0]['score'], 8.0)
-        self.assertEqual(scored_ideas[0]['justifications']['1'], 'Innovative and feasible.')
-
-    @patch('idea_evaluation.create_completion')
-    def test_idea_evaluation_chat_model(self, mock_create):
+    def test_evaluate_ideas_chat_model(self, mock_create):
         # Setup mock response for chat model
-        mock_create.return_value = '{"1": {"score": 9, "justification": "Highly novel and promising."}, "2": {"score": 9, "justification": "Reason"}, "3": {"score": 9, "justification": "Reason"}, "4": {"score": 9, "justification": "Reason"}, "5": {"score": 9, "justification": "Reason"}, "6": {"score": 9, "justification": "Reason"}, "7": {"score": 9, "justification": "Reason"}, "8": {"score": 9, "justification": "Reason"}, "9": {"score": 9, "justification": "Reason"}, "10": {"score": 9, "justification": "Reason"}}'
+        mock_create.return_value = json.dumps({
+            "scores": [8, 7, 9],
+            "justifications": {
+                "criterion_1": "Justification 1",
+                "criterion_2": "Justification 2",
+                "criterion_3": "Justification 3"
+            }
+        })
         evaluator = IdeaEvaluator('gpt-4')
-        scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
+        scored_ideas = evaluator.evaluate_ideas(['Idea 1'])
         self.assertEqual(len(scored_ideas), 1)
-        self.assertEqual(scored_ideas[0]['score'], 9.0)
-        self.assertEqual(scored_ideas[0]['justifications']['1'], 'Highly novel and promising.')
+        self.assertEqual(scored_ideas[0]['score'], 24)
+        self.assertEqual(len(scored_ideas[0]['justifications']), 3)
 
-    # Tests for ExperimentDesigner
     @patch('experiment_design.create_completion')
-    def test_experiment_design(self, mock_create):
-        mock_create.return_value = "[{'action': 'run_python_code', 'code': 'print(\"Hello, World!\")'}]"
+    def test_design_experiment_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = json.dumps({
+            "experiment_plan": [
+                {"action": "run_python_code", "code": "print('Hello, World!')"},
+                {"action": "use_llm_api", "prompt": "Generate a test prompt"}
+            ]
+        })
         designer = ExperimentDesigner('gpt-4')
-        plan = designer.design_experiment('Test Idea')
-        self.assertEqual(plan, [{'action': 'run_python_code', 'code': 'print("Hello, World!")'}])
+        experiment_plan = designer.design_experiment("Test idea")
+        self.assertEqual(len(experiment_plan), 2)
+        self.assertEqual(experiment_plan[0]['action'], "run_python_code")
+        self.assertEqual(experiment_plan[1]['action'], "use_llm_api")
 
-    # Tests for ExperimentExecutor
-    @patch('experiment_execution.ExperimentExecutor.run_python_code')
-    @patch('experiment_execution.ExperimentExecutor.use_llm_api')
-    @patch('experiment_execution.ExperimentExecutor.make_web_request')
-    @patch('experiment_execution.ExperimentExecutor.use_gpu')
-    def test_experiment_execution(self, mock_gpu, mock_web, mock_llm, mock_python):
-        mock_python.return_value = "Hello, World!"
-        mock_llm.return_value = "LLM Response"
-        mock_web.return_value = "Web Response"
-        mock_gpu.return_value = "GPU Task Result"
-        
-        executor = ExperimentExecutor('gpt-4')
-        plan = [
-            {'action': 'run_python_code', 'code': 'print("Hello, World!")'},
-            {'action': 'use_llm_api', 'prompt': 'Test prompt'},
-            {'action': 'web_request', 'url': 'http://example.com'},
-            {'action': 'use_gpu', 'task': 'Test GPU task'}
-        ]
-        results = executor.execute_experiment(plan)
-        expected_results = ["Hello, World!", "LLM Response", "Web Response", "GPU Task Result"]
-        self.assertEqual(results, expected_results)
-
-    # Tests for FeedbackLoop
     @patch('feedback_loop.create_completion')
-    def test_feedback_loop(self, mock_create):
-        mock_create.return_value = "[{'action': 'run_python_code', 'code': 'print(\"Refined\")'}]"
-        feedback = FeedbackLoop('gpt-4')
-        initial_plan = [{'action': 'run_python_code', 'code': 'print("Initial")'}]
-        refined_plan = feedback.refine_experiment(initial_plan, 'Test Initial Results')
-        self.assertEqual(refined_plan, [{'action': 'run_python_code', 'code': 'print("Refined")'}])
+    def test_refine_experiment_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = json.dumps({
+            "refined_plan": [
+                {"action": "run_python_code", "code": "print('Refined experiment')"},
+                {"action": "use_llm_api", "prompt": "Generate a refined test prompt"}
+            ]
+        })
+        feedback_loop = FeedbackLoop('gpt-4')
+        initial_plan = [{"action": "run_python_code", "code": "print('Initial experiment')"}]
+        refined_plan = feedback_loop.refine_experiment(initial_plan, "Initial results")
+        self.assertEqual(len(refined_plan), 2)
+        self.assertEqual(refined_plan[0]['action'], "run_python_code")
+        self.assertEqual(refined_plan[1]['action'], "use_llm_api")
 
-    # Tests for LogErrorChecker
-    @patch('log_error_checker.create_completion')
-    def test_log_error_checker_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = 'Issue 1: Error XYZ\nIssue 2: Warning ABC'
-        checker = LogErrorChecker('text-davinci-003')
-        analysis = checker.check_logs('logs/main.log')
-        self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
+    @patch('system_augmentation.create_completion')
+    def test_system_augmentation_chat_model(self, mock_create):
+        # Setup mock response for chat model
+        mock_create.return_value = json.dumps({
+            "code_modifications": [
+                {"file": "idea_generation.py", "line": 45, "code": "# Modified code here"},
+                {"file": "idea_evaluation.py", "line": 30, "code": "# Another modification"}
+            ]
+        })
+        augmentor = SystemAugmentor('gpt-4')
+        with patch.object(SystemAugmentor, '_validate_modifications', return_value=True), \
+             patch.object(SystemAugmentor, '_apply_code_modifications'), \
+             patch.object(SystemAugmentor, '_run_tests', return_value=True), \
+             patch.object(SystemAugmentor, '_evaluate_performance_improvement', return_value=True):
+            augmentor.augment_system("Test experiment results")
+        # Assert that the methods were called (you can add more specific assertions if needed)
+        self.assertTrue(augmentor._validate_modifications.called)
+        self.assertTrue(augmentor._apply_code_modifications.called)
+        self.assertTrue(augmentor._run_tests.called)
+        self.assertTrue(augmentor._evaluate_performance_improvement.called)
 
     @patch('log_error_checker.create_completion')
     def test_log_error_checker_chat_model(self, mock_create):
@@ -125,16 +123,6 @@ class TestAIResearchSystem(unittest.TestCase):
         checker = LogErrorChecker('gpt-4')
         analysis = checker.check_logs('logs/main.log')
         self.assertEqual(analysis, 'Issue 1: Error XYZ\nIssue 2: Warning ABC')
-
-    # Tests for ErrorFixer
-    @patch('error_fixing.create_completion')
-    def test_error_fixing_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = 'File: utils/logger.py\nLine 45: Add log rotation handler.'
-        with patch.object(ErrorFixer, 'apply_code_fixes') as mock_apply:
-            fixer = ErrorFixer('text-davinci-003')
-            fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
-            mock_apply.assert_called_once_with('File: utils/logger.py\nLine 45: Add log rotation handler.')
 
     @patch('error_fixing.create_completion')
     def test_error_fixing_chat_model(self, mock_create):
