@@ -92,7 +92,7 @@ def main():
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             generated_ideas = idea_generator.generate_ideas()
             
-            debug_logger.info(f"Generated {len(generated_ideas)} ideas:")
+            debug_logger.info(f"Generated {len(generated_ideas)} ideas for run {experiment_run + 1}:")
             for i, idea in enumerate(generated_ideas, 1):
                 debug_logger.info(f"Idea {i}: {idea[:50]}...")  # Log first 50 characters of each idea
 

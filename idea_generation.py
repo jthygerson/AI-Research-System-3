@@ -66,6 +66,7 @@ class IdeaGenerator:
             if parsed_response:
                 ideas = parsed_response.get('research_ideas', [])
                 ideas = [idea['description'] for idea in ideas if 'description' in idea]
+                return ideas[:self.num_ideas]  # Ensure we return only the requested number of ideas
             else:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 ideas = self.parse_text_response(response)
