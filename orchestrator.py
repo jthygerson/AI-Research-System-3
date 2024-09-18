@@ -69,16 +69,18 @@ def main():
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 
-            # Generate and evaluate ideas only once per experiment run
-            main_logger.info("Generating and evaluating ideas...")
-            for _ in range(args.num_ideas):
-                new_idea = idea_generator.generate_ideas()[0]  # Generate one idea at a time
-                main_logger.info(f"Generated idea: {new_idea[:50]}...")
-                
-                scored_idea = idea_evaluator.evaluate_ideas([new_idea])[0]
-                main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
-                
+            # Generate ideas only once per experiment run
+            main_logger.info("Generating ideas...")
+            generated_ideas = idea_generator.generate_ideas()
+            main_logger.info(f"Generated {len(generated_ideas)} ideas")
+
+            # Evaluate all generated ideas
+            main_logger.info("Evaluating ideas...")
+            scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
+            
+            for scored_idea in scored_ideas:
                 all_generated_ideas.append(scored_idea)
+                main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
                 
                 if scored_idea['score'] > 80:
                     best_idea = scored_idea
