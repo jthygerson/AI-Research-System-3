@@ -62,16 +62,16 @@ def main():
         for experiment_run in range(args.num_experiments):
             main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
 
+            # Reset state for the new experiment run
             best_idea = None
             all_generated_ideas = []
-            max_ideas = args.num_ideas
 
             idea_generator = IdeaGenerator(model_name, 1)  # Generate one idea at a time
             idea_evaluator = IdeaEvaluator(model_name)
 
-            for _ in range(max_ideas):
+            for _ in range(args.num_ideas):
                 main_logger.info("Generating idea...")
-                
+
                 # Step 1: Idea Generation
                 new_ideas = idea_generator.generate_ideas()
                 if not new_ideas:
@@ -79,14 +79,14 @@ def main():
                     continue
                 main_logger.info(f"Generated idea: {new_ideas[0]}")
                 all_generated_ideas.append(new_ideas[0])
-                
+
                 # Step 2: Idea Evaluation
                 new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
                 if not new_scored_ideas:
                     main_logger.info("No ideas were scored. Continuing to next iteration.")
                     continue
                 main_logger.info(f"Evaluated idea with score: {new_scored_ideas[0]['score']}")
-                
+
                 # Check if the idea has a score greater than 80
                 if new_scored_ideas[0]['score'] > 80:
                     best_idea = new_scored_ideas[0]
@@ -129,10 +129,6 @@ def main():
                 continue
 
             main_logger.info("Experiment plan designed successfully.")
-
-            # Reset state for the next experiment run
-            best_idea = None
-            all_generated_ideas = []
 
             # Step 4: Experiment Execution
             main_logger.info("Executing experiment...")
