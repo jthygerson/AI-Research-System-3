@@ -106,6 +106,10 @@ def main():
                 for idea in all_generated_ideas:
                     f.write(f"{idea}\n")
 
+            # Reset state for the next experiment run
+            best_idea = None
+            all_generated_ideas = []
+
             # Step 3: Experiment Design
             main_logger.info("Designing experiment...")
             experiment_designer = ExperimentDesigner(model_name)
