@@ -5,6 +5,7 @@ import sys
 import argparse
 import traceback
 import logging
+import hashlib
 
 # Import all modules
 from idea_generation import IdeaGenerator
@@ -59,27 +60,35 @@ def main():
 
     try:
         previous_performance = None
+
         for experiment_run in range(args.num_experiments):
             main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
 
             # Reset state for the new experiment run
             best_idea = None
-            all_generated_ideas = []
+            current_run_ideas = []
+            evaluated_ideas = set()  # Reset for each run
 
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 
-            # Generate ideas only once per experiment run
-            main_logger.info("Generating ideas...")
+            # Generate new ideas for this run
+            main_logger.info("Generating ideas for this experiment run...")
             generated_ideas = idea_generator.generate_ideas()
-            main_logger.info(f"Generated {len(generated_ideas)} ideas")
+            main_logger.info(f"Generated {len(generated_ideas)} ideas for this run")
 
             # Evaluate all generated ideas
             main_logger.info("Evaluating ideas...")
-            scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
-            
-            for scored_idea in scored_ideas:
-                all_generated_ideas.append(scored_idea)
+            for idea in generated_ideas:
+                idea_hash = hashlib.md5(idea.encode()).hexdigest()
+                if idea_hash in evaluated_ideas:
+                    main_logger.info(f"Skipping already evaluated idea: {idea[:50]}...")
+                    continue
+
+                scored_idea = idea_evaluator.evaluate_ideas([idea])[0]
+                evaluated_ideas.add(idea_hash)
+
+                current_run_ideas.append(scored_idea)
                 main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
                 
                 if scored_idea['score'] > 80:
@@ -91,17 +100,17 @@ def main():
 
             if best_idea is None:
                 main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
-                if all_generated_ideas:
-                    best_idea = max(all_generated_ideas, key=lambda x: x['score'])
+                if current_run_ideas:
+                    best_idea = max(current_run_ideas, key=lambda x: x['score'])
                 else:
                     main_logger.error("No ideas were generated. Skipping this experiment run.")
                     continue
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
 
-            # Log all generated ideas
-            with open('logs/all_ideas.log', 'a') as f:
-                for idea in all_generated_ideas:
+            # Log all generated ideas for this run
+            with open(f'logs/ideas_run_{experiment_run + 1}.log', 'w') as f:
+                for idea in current_run_ideas:
                     f.write(f"{idea}\n")
 
             # Step 3: Experiment Design
