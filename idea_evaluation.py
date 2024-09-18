@@ -11,12 +11,14 @@ import time
 from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
 import openai
+from logging import getLogger
 
 class IdeaEvaluator:
     def __init__(self, model_name):
         self.model_name = model_name
         self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
-        self.initialize_openai()  # Call this method in the constructor
+        self.debug_logger = getLogger('debug')
+        self.initialize_openai()
 
     def initialize_openai(self):
         self.logger.info("Initializing OpenAI client for IdeaEvaluator")
@@ -26,7 +28,7 @@ class IdeaEvaluator:
         """
         Evaluates ideas based on multiple criteria.
         """
-        self.initialize_openai()  # Reinitialize before evaluating ideas
+        self.debug_logger.info(f"Evaluating {len(ideas)} ideas")
         self.logger.debug("Evaluating ideas...")
         scored_ideas = []
         
@@ -51,6 +53,8 @@ class IdeaEvaluator:
                     "output_format": "JSON"
                 }
                 
+                self.debug_logger.debug(f"Evaluation prompt: {json.dumps(prompt)}")
+                
                 response = create_completion(
                     self.model_name,
                     messages=[
@@ -61,8 +65,8 @@ class IdeaEvaluator:
                     temperature=0.7
                 )
                 
-                self.logger.debug(f"Raw API response for idea '{idea[:50]}...': {response}")
-
+                self.debug_logger.debug(f"Raw API response: {response}")
+                
                 try:
                     evaluation_data = json.loads(response)
                     scores = evaluation_data.get('scores', {})
@@ -91,6 +95,7 @@ class IdeaEvaluator:
                 self.logger.error(f"Error evaluating idea '{idea[:50]}...': {str(e)}")
                 self.logger.error(traceback.format_exc())
 
+        self.debug_logger.debug(f"Parsed evaluation data: {json.dumps(evaluation_data)}")
         return scored_ideas
 
     def parse_text_evaluation(self, response):

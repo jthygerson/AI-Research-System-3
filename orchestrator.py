@@ -6,6 +6,8 @@ import argparse
 import traceback
 import logging
 import hashlib
+import json
+import time
 
 # Import all modules
 from idea_generation import IdeaGenerator
@@ -22,6 +24,16 @@ from utils.safety_checker import SafetyChecker
 
 from utils.logger import setup_logger
 from utils.code_backup import backup_code, restore_code
+
+# Set up a dedicated debug logger
+debug_logger = logging.getLogger('debug')
+debug_logger.setLevel(logging.DEBUG)
+debug_handler = logging.FileHandler('logs/detailed_debug.log')
+debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+debug_logger.addHandler(debug_handler)
+
+def hash_idea(idea):
+    return hashlib.md5(idea.encode()).hexdigest()
 
 def main():
     # Initialize argument parser
@@ -61,14 +73,60 @@ def main():
     try:
         previous_performance = None
 
+        all_idea_hashes = set()
+
         for experiment_run in range(args.num_experiments):
-            main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
+            debug_logger.info(f"=============== Starting experiment run {experiment_run + 1} ===============")
+            
+            # Log the state of the random number generator
+            debug_logger.debug(f"Random state before idea generation: {json.dumps(random.getstate())}")
+            
+            start_time = time.time()
+            idea_generator = IdeaGenerator(model_name, args.num_ideas)
+            debug_logger.info(f"IdeaGenerator instance created in {time.time() - start_time:.4f} seconds")
+            
+            debug_logger.debug(f"IdeaGenerator state: {json.dumps(idea_generator.__dict__, default=str)}")
+            
+            start_time = time.time()
+            generated_ideas = idea_generator.generate_ideas()
+            generation_time = time.time() - start_time
+            debug_logger.info(f"Ideas generated in {generation_time:.4f} seconds")
+            
+            debug_logger.debug(f"Generated ideas: {json.dumps(generated_ideas)}")
+            
+            for i, idea in enumerate(generated_ideas):
+                idea_hash = hash_idea(idea)
+                debug_logger.info(f"Run {experiment_run + 1}, Idea {i+1} Hash: {idea_hash}")
+                if idea_hash in all_idea_hashes:
+                    debug_logger.warning(f"Duplicate idea detected in run {experiment_run + 1}, Idea {i+1}")
+                    debug_logger.debug(f"Duplicate idea full text: {idea}")
+                else:
+                    all_idea_hashes.add(idea_hash)
+            
+            # Log OpenAI API calls
+            debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(openai.api_requestor.APIRequestor.request_history)}")
+            
+            # Idea evaluation
+            idea_evaluator = IdeaEvaluator(model_name)
+            debug_logger.debug(f"IdeaEvaluator state: {json.dumps(idea_evaluator.__dict__, default=str)}")
+            
+            for i, idea in enumerate(generated_ideas):
+                start_time = time.time()
+                scored_idea = idea_evaluator.evaluate_ideas([idea])[0]
+                evaluation_time = time.time() - start_time
+                debug_logger.info(f"Idea {i+1} evaluated in {evaluation_time:.4f} seconds")
+                debug_logger.debug(f"Scored idea: {json.dumps(scored_idea)}")
+            
+            # Log the state of the random number generator after all operations
+            debug_logger.debug(f"Random state after idea evaluation: {json.dumps(random.getstate())}")
+            
+            debug_logger.info(f"=============== Completed experiment run {experiment_run + 1} ===============\n")
 
             # Reset state for the new experiment run
             best_idea = None
             current_run_ideas = []
 
-            # Create new instances for each run
+            # Create a new IdeaGenerator instance for each run
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 

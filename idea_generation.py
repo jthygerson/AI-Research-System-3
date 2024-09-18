@@ -9,13 +9,15 @@ import openai
 import traceback
 import logging
 from utils.json_utils import parse_llm_response
+from logging import getLogger
 
 class IdeaGenerator:
     def __init__(self, model_name, num_ideas):
         self.model_name = model_name
         self.num_ideas = num_ideas
-        self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.ERROR)
-        self.initialize_openai()  # Call this method in the constructor
+        self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.DEBUG)
+        self.debug_logger = getLogger('debug')
+        self.initialize_openai()
 
     def initialize_openai(self):
         self.logger.info("Initializing OpenAI client for IdeaGenerator")
@@ -25,8 +27,7 @@ class IdeaGenerator:
         """
         Generates research ideas using the OpenAI API.
         """
-        self.initialize_openai()  # Reinitialize before generating ideas
-        self.logger.info("Generating ideas...")
+        self.debug_logger.info(f"Generating ideas with model: {self.model_name}, num_ideas: {self.num_ideas}")
         try:
             prompt = {
                 "task": "generate_research_ideas",
@@ -57,7 +58,9 @@ class IdeaGenerator:
                 temperature=0.7
             )
             
-            self.logger.info(f"Raw API response: {response}")
+            self.debug_logger.debug(f"Prompt for idea generation: {json.dumps(prompt)}")
+            
+            self.debug_logger.debug(f"Raw API response: {response}")
             
             parsed_response = parse_llm_response(response)
             if parsed_response:
@@ -67,7 +70,7 @@ class IdeaGenerator:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 ideas = self.parse_text_response(response)
 
-            self.logger.debug(f"Generated ideas: {ideas}")
+            self.debug_logger.debug(f"Generated ideas: {ideas}")
             if not ideas:
                 self.logger.warning("No ideas were generated")
             return ideas
