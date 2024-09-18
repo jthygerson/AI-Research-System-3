@@ -77,7 +77,7 @@ def main():
                 main_logger.info(f"Generated {len(new_ideas)} ideas")
                 
                 # Step 2: Idea Evaluation (only evaluate new ideas)
-                idea_evaluator = IdeaEvaluator(model_name)
+                idea_evaluator = IdeaEvaluator(model_name)  # Create a new instance for each round
                 new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
                 if not new_scored_ideas:
                     main_logger.info("No ideas were scored. Continuing to next round.")
