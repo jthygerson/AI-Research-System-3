@@ -33,12 +33,13 @@ class IdeaEvaluator:
             list: List of dictionaries with idea, score, and justifications.
         """
         start_time = time.time()
+        print("Evaluating ideas...")
         self.logger.info("Evaluating ideas...")
-        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
         try:
             evaluated_ideas = []
-            for idea in ideas:
+            for i, idea in enumerate(ideas, 1):
                 idea_start_time = time.time()
+                
                 prompt = {
                     "task": "evaluate_research_idea",
                     "idea": idea,
@@ -103,16 +104,19 @@ class IdeaEvaluator:
                 }
                 evaluated_ideas.append(evaluated_idea)
                 
-                # Print the idea and its score to the terminal
-                print(f"Idea: {idea}")
-                print(f"Score: {evaluated_idea['score']}")
-                print("-" * 50)  # Separator for readability
-                
                 self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
+                
+                # Update progress
+                print(f"\rEvaluated {i}/{len(ideas)} ideas", end="", flush=True)
+            
+            print()  # New line after progress update
+            return evaluated_ideas
         except Exception as e:
-            self.logger.error(f"Error evaluating ideas: {str(e)}")
-            self.logger.error(traceback.format_exc())  # Log the full traceback for debugging
-        return []
+            error_message = f"Error evaluating ideas: {str(e)}"
+            self.logger.error(error_message)
+            self.logger.error(traceback.format_exc())
+            print(error_message)
+            return []
 
     def parse_text_evaluation(self, response):
         scores = []

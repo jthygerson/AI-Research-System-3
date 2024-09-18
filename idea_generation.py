@@ -23,6 +23,7 @@ class IdeaGenerator:
         """
         Generates research ideas using the OpenAI API.
         """
+        print("Generating ideas...")
         self.logger.info("Generating ideas...")
         try:
             prompt = {
@@ -80,10 +81,13 @@ class IdeaGenerator:
                 ideas = self.parse_text_response(response)
 
             self.logger.info(f"Generated {len(ideas)} ideas")
+            print(f"Generated {len(ideas)} ideas")
             return ideas
         except Exception as e:
-            self.logger.error(f"Error generating ideas: {str(e)}")
+            error_message = f"Error generating ideas: {str(e)}"
+            self.logger.error(error_message)
             self.logger.error(traceback.format_exc())
+            print(error_message)
             return []
 
     def parse_text_response(self, response):
