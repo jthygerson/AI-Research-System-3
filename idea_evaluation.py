@@ -86,7 +86,13 @@ class IdeaEvaluator:
 
                 # Parse response
                 try:
-                    evaluation_data = json.loads(response)
+                    cleaned_response = response.strip()
+                    if cleaned_response.startswith("```json"):
+                        cleaned_response = cleaned_response[7:]  # Remove ```json
+                    if cleaned_response.endswith("```"):
+                        cleaned_response = cleaned_response[:-3]  # Remove closing ```
+                    
+                    evaluation_data = json.loads(cleaned_response)
                     scores = []
                     justifications = {}
                     for i, criterion in enumerate(prompt['criteria'], 1):

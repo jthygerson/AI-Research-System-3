@@ -4,6 +4,7 @@ import os
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+import json
 
 class ExperimentDesigner:
     def __init__(self, model_name):
@@ -54,7 +55,16 @@ class ExperimentDesigner:
                     temperature=0.7,
                 )
             
-            experiment_plan = self.parse_response_to_plan(response)
+            self.logger.debug(f"Raw API response: {response}")
+
+            # Clean and parse the response
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove closing ```
+
+            experiment_plan = self.parse_response_to_plan(cleaned_response)
             self.logger.info(f"Experiment plan: {experiment_plan}")
             return experiment_plan
         except Exception as e:
@@ -63,13 +73,13 @@ class ExperimentDesigner:
 
     def parse_response_to_plan(self, response):
         try:
-            # Assuming the response is a string representation of a Python list of dictionaries
-            plan = eval(response)
+            # Assuming the response is a JSON string representation of a list of dictionaries
+            plan = json.loads(response)
             if isinstance(plan, list) and all(isinstance(step, dict) for step in plan):
                 return plan
             else:
                 self.logger.error("Invalid experiment plan format")
                 return []
-        except Exception as e:
+        except json.JSONDecodeError as e:
             self.logger.error(f"Error parsing experiment plan: {e}")
             return []

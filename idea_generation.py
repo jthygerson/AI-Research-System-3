@@ -72,9 +72,15 @@ class IdeaGenerator:
             
             self.logger.info(f"Raw API response: {response}")
             
-            # Check if the response is a JSON string
+            # New code to handle the JSON response
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove closing ```
+            
             try:
-                ideas_data = json.loads(response)
+                ideas_data = json.loads(cleaned_response)
                 ideas = ideas_data.get('research_ideas', [])
                 ideas = [idea['description'] for idea in ideas if 'description' in idea]
             except json.JSONDecodeError:

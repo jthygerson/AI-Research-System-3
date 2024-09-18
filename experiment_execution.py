@@ -6,6 +6,7 @@ import requests
 import openai
 from utils.logger import setup_logger
 from utils.resource_manager import ResourceManager
+import json
 
 class ExperimentExecutor:
     def __init__(self, model_name):
@@ -50,7 +51,20 @@ class ExperimentExecutor:
     def use_llm_api(self, prompt):
         # Use the OpenAI API or any other LLM API
         response = create_completion(self.model_name, prompt=prompt, max_tokens=100)
-        return response
+        
+        # Clean and parse the response if it's in JSON format
+        cleaned_response = response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]  # Remove ```json
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]  # Remove closing ```
+        
+        try:
+            # Attempt to parse as JSON
+            return json.loads(cleaned_response)
+        except json.JSONDecodeError:
+            # If it's not valid JSON, return the original response
+            return response
 
     def make_web_request(self, url, method='GET'):
         # Implement rate limiting and respect robots.txt
