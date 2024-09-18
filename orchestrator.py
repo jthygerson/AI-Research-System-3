@@ -87,7 +87,7 @@ def main():
                 round_best_idea = max(scored_ideas, key=lambda x: x['score'])
                 main_logger.info(f"Best idea score: {round_best_idea['score']:.2f}")
 
-                if round_best_idea['score'] > 8.5:
+                if round_best_idea['score'] > 85:
                     best_idea = round_best_idea
                     break
                 elif round == max_rounds - 1 or (best_idea is None or round_best_idea['score'] > best_idea['score']):
