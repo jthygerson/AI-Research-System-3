@@ -8,6 +8,7 @@ import logging
 import hashlib
 import json
 import time
+import random  # Add this import
 
 # Import all modules
 from idea_generation import IdeaGenerator
