@@ -15,13 +15,13 @@ class IdeaEvaluator:
 
     def evaluate_ideas(self, ideas):
         """
-        Evaluates ideas based on novelty and probability of success.
+        Evaluates ideas based on multiple criteria.
 
         Parameters:
             ideas (list): List of idea strings to evaluate.
 
         Returns:
-            list: List of dictionaries with idea, score, and justification.
+            list: List of dictionaries with idea, score, and justifications.
         """
         self.logger.info("Evaluating ideas...")
         chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
@@ -41,7 +41,8 @@ class IdeaEvaluator:
                     f"9. Potential to increase log file error-checking accuracy\n"
                     f"10. Potential to improve error fixing effectiveness\n\n"
                     f"Idea: {idea}\n\n"
-                    f"Provide the scores and a brief justification for each criterion."
+                    f"Provide the scores and a brief justification for each criterion in JSON format. "
+                    f"Example format: {{'1': {{'score': 8, 'justification': 'Reason'}}, '2': {{'score': 7, 'justification': 'Reason'}}, ...}}"
                 )
                 
                 if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
@@ -65,16 +66,38 @@ class IdeaEvaluator:
                 # Parse JSON response
                 try:
                     evaluation_json = json.loads(response)
-                    score = evaluation_json.get('score', 0)
-                    justification = evaluation_json.get('justification', '')
-                except json.JSONDecodeError:
-                    self.logger.error(f"Failed to parse evaluation response as JSON for idea '{idea}'.")
-                    score = 0
-                    justification = ''
-
-                evaluated_ideas.append({'idea': idea, 'score': score, 'justification': justification})
-                self.logger.info(f"Idea: {idea}, Score: {score}, Justification: {justification}")
+                    scores = []
+                    justifications = {}
+                    for i in range(1, 11):
+                        criterion = str(i)
+                        try:
+                            scores.append(evaluation_json[criterion]['score'])
+                            justifications[criterion] = evaluation_json[criterion]['justification']
+                        except KeyError:
+                            self.logger.warning(f"Missing score for criterion {criterion}. Using second lowest score.")
+                            if len(scores) >= 2:
+                                scores.append(sorted(scores)[1])  # Add second lowest score
+                            else:
+                                scores.append(1)  # If less than 2 scores, use 1 as a fallback
+                            justifications[criterion] = "Score estimation due to parsing error."
+                    
+                    average_score = sum(scores) / len(scores)
+                    
+                    evaluated_ideas.append({
+                        'idea': idea, 
+                        'score': round(average_score, 2),
+                        'justifications': justifications
+                    })
+                    self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"Failed to parse evaluation response for idea '{idea}': {e}")
+                    evaluated_ideas.append({
+                        'idea': idea, 
+                        'score': 1,  # Lowest possible score as a fallback
+                        'justifications': {'error': 'Failed to parse response'}
+                    })
+        
             return evaluated_ideas
         except Exception as e:
             self.logger.error(f"Error evaluating ideas: {e}")
-        return evaluated_ideas
+        return []
