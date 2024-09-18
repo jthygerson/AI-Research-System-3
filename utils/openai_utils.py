@@ -9,6 +9,9 @@ import traceback
 logger = logging.getLogger('openai_utils')
 logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
 
+# Initialize the OpenAI client
+client = openai.OpenAI()
+
 def create_completion(model, messages=None, prompt=None, max_tokens=100, temperature=0.7):
     logger.info(f"Creating completion with model: {model}")
     logger.info(f"Messages: {messages}")
