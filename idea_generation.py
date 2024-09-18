@@ -6,8 +6,12 @@ from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 
 class IdeaGenerator:
+    openai_initialized = False
+
     def __init__(self, model_name, num_ideas):
-        initialize_openai()  # Initialize OpenAI API key
+        if not IdeaGenerator.openai_initialized:
+            initialize_openai()  # Initialize OpenAI API key
+            IdeaGenerator.openai_initialized = True
         self.model_name = model_name
         self.num_ideas = num_ideas
         self.logger = setup_logger('idea_generation', 'logs/idea_generation.log')

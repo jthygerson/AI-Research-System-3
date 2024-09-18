@@ -72,54 +72,42 @@ class TestAIResearchSystem(unittest.TestCase):
 
     # Tests for ExperimentDesigner
     @patch('experiment_design.create_completion')
-    def test_experiment_design_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = 'Experiment Plan Content'
-        designer = ExperimentDesigner('text-davinci-003')
-        plan = designer.design_experiment('Test Idea')
-        self.assertEqual(plan, 'Experiment Plan Content')
-
-    @patch('experiment_design.create_completion')
-    def test_experiment_design_chat_model(self, mock_create):
-        # Setup mock response for chat model
-        mock_create.return_value = 'Experiment Plan Content'
+    def test_experiment_design(self, mock_create):
+        mock_create.return_value = "[{'action': 'run_python_code', 'code': 'print(\"Hello, World!\")'}]"
         designer = ExperimentDesigner('gpt-4')
         plan = designer.design_experiment('Test Idea')
-        self.assertEqual(plan, 'Experiment Plan Content')
+        self.assertEqual(plan, [{'action': 'run_python_code', 'code': 'print("Hello, World!")'}])
 
     # Tests for ExperimentExecutor
-    @patch('experiment_execution.create_completion')
-    def test_experiment_execution_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = 'Execution Results Content'
-        executor = ExperimentExecutor('text-davinci-003')
-        results = executor.execute_experiment('Test Experiment Plan')
-        self.assertEqual(results, 'Execution Results Content')
-
-    @patch('experiment_execution.create_completion')
-    def test_experiment_execution_chat_model(self, mock_create):
-        # Setup mock response for chat model
-        mock_create.return_value = 'Execution Results Content'
+    @patch('experiment_execution.ExperimentExecutor.run_python_code')
+    @patch('experiment_execution.ExperimentExecutor.use_llm_api')
+    @patch('experiment_execution.ExperimentExecutor.make_web_request')
+    @patch('experiment_execution.ExperimentExecutor.use_gpu')
+    def test_experiment_execution(self, mock_gpu, mock_web, mock_llm, mock_python):
+        mock_python.return_value = "Hello, World!"
+        mock_llm.return_value = "LLM Response"
+        mock_web.return_value = "Web Response"
+        mock_gpu.return_value = "GPU Task Result"
+        
         executor = ExperimentExecutor('gpt-4')
-        results = executor.execute_experiment('Test Experiment Plan')
-        self.assertEqual(results, 'Execution Results Content')
+        plan = [
+            {'action': 'run_python_code', 'code': 'print("Hello, World!")'},
+            {'action': 'use_llm_api', 'prompt': 'Test prompt'},
+            {'action': 'web_request', 'url': 'http://example.com'},
+            {'action': 'use_gpu', 'task': 'Test GPU task'}
+        ]
+        results = executor.execute_experiment(plan)
+        expected_results = ["Hello, World!", "LLM Response", "Web Response", "GPU Task Result"]
+        self.assertEqual(results, expected_results)
 
     # Tests for FeedbackLoop
     @patch('feedback_loop.create_completion')
-    def test_feedback_loop_completion_model(self, mock_create):
-        # Setup mock response for completion model
-        mock_create.return_value = 'Refined Experiment Plan Content'
-        feedback = FeedbackLoop('text-davinci-003')
-        refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
-        self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
-
-    @patch('feedback_loop.create_completion')
-    def test_feedback_loop_chat_model(self, mock_create):
-        # Setup mock response for chat model
-        mock_create.return_value = 'Refined Experiment Plan Content'
+    def test_feedback_loop(self, mock_create):
+        mock_create.return_value = "[{'action': 'run_python_code', 'code': 'print(\"Refined\")'}]"
         feedback = FeedbackLoop('gpt-4')
-        refined_plan = feedback.refine_experiment('Test Experiment Plan', 'Test Initial Results')
-        self.assertEqual(refined_plan, 'Refined Experiment Plan Content')
+        initial_plan = [{'action': 'run_python_code', 'code': 'print("Initial")'}]
+        refined_plan = feedback.refine_experiment(initial_plan, 'Test Initial Results')
+        self.assertEqual(refined_plan, [{'action': 'run_python_code', 'code': 'print("Refined")'}])
 
     # Tests for LogErrorChecker
     @patch('log_error_checker.create_completion')

@@ -6,10 +6,15 @@ import json  # Import JSON module for parsing
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+import time
 
 class IdeaEvaluator:
+    openai_initialized = False
+
     def __init__(self, model_name):
-        initialize_openai()  # Initialize OpenAI API key
+        if not IdeaEvaluator.openai_initialized:
+            initialize_openai()  # Initialize OpenAI API key
+            IdeaEvaluator.openai_initialized = True
         self.model_name = model_name
         self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
 
@@ -23,11 +28,13 @@ class IdeaEvaluator:
         Returns:
             list: List of dictionaries with idea, score, and justifications.
         """
+        start_time = time.time()
         self.logger.info("Evaluating ideas...")
         chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
         try:
             evaluated_ideas = []
             for idea in ideas:
+                idea_start_time = time.time()
                 prompt = (
                     f"Evaluate the following idea on a scale of 1-10 for each of these criteria:\n"
                     f"1. Potential to improve idea generation quality\n"
@@ -83,19 +90,37 @@ class IdeaEvaluator:
                     
                     average_score = sum(scores) / len(scores)
                     
-                    evaluated_ideas.append({
+                    evaluated_idea = {
                         'idea': idea, 
                         'score': round(average_score, 2),
                         'justifications': justifications
-                    })
+                    }
+                    evaluated_ideas.append(evaluated_idea)
+                    
+                    # Print the idea and its score to the terminal
+                    print(f"Idea: {idea}")
+                    print(f"Score: {evaluated_idea['score']}")
+                    print("-" * 50)  # Separator for readability
+                    
                     self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
                 except json.JSONDecodeError as e:
                     self.logger.error(f"Failed to parse evaluation response for idea '{idea}': {e}")
-                    evaluated_ideas.append({
+                    evaluated_idea = {
                         'idea': idea, 
                         'score': 1,  # Lowest possible score as a fallback
                         'justifications': {'error': 'Failed to parse response'}
-                    })
+                    }
+                    evaluated_ideas.append(evaluated_idea)
+                    
+                    # Print the idea and its score to the terminal (error case)
+                    print(f"Idea: {idea}")
+                    print(f"Score: {evaluated_idea['score']} (Error in evaluation)")
+                    print("-" * 50)  # Separator for readability
+                    
+                idea_end_time = time.time()
+                self.logger.info(f"Time to evaluate idea: {idea_end_time - idea_start_time:.2f} seconds")
+            end_time = time.time()
+            self.logger.info(f"Total evaluation time: {end_time - start_time:.2f} seconds")
         
             return evaluated_ideas
         except Exception as e:

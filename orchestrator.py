@@ -16,6 +16,7 @@ from benchmarking import Benchmarking
 from report_writer import ReportWriter
 from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
+from utils.safety_checker import SafetyChecker
 
 from utils.logger import setup_logger
 from utils.code_backup import backup_code, restore_code
@@ -56,34 +57,53 @@ def main():
         main_logger.error("Failed to back up code.")
         print("Failed to back up code.")
 
+    safety_checker = SafetyChecker()
+
     try:
         previous_performance = None
         for experiment_run in range(args.num_experiments):
             main_logger.info(f"Starting experiment run {experiment_run + 1}")
             print(f"\nStarting experiment run {experiment_run + 1}")
 
-            # Step 1: Idea Generation
-            print("Generating ideas...")
-            idea_generator = IdeaGenerator(model_name, args.num_ideas)
-            ideas = idea_generator.generate_ideas()
-            if not ideas:
-                main_logger.error(f"No ideas generated in experiment run {experiment_run + 1}. Skipping.")
-                print(f"No ideas generated in experiment run {experiment_run + 1}. Skipping.")
-                continue
-            print(f"Generated {len(ideas)} ideas")
+            best_idea = None
+            max_rounds = 10
+            for round in range(max_rounds):
+                # Step 1: Idea Generation
+                print(f"Generating ideas (Round {round + 1})...")
+                idea_generator = IdeaGenerator(model_name, args.num_ideas)
+                ideas = idea_generator.generate_ideas()
+                if not ideas:
+                    main_logger.error(f"No ideas generated in round {round + 1}. Continuing to next round.")
+                    print(f"No ideas generated in round {round + 1}. Continuing to next round.")
+                    continue
+                print(f"Generated {len(ideas)} ideas")
 
-            # Step 2: Idea Evaluation
-            print("Evaluating ideas...")
-            idea_evaluator = IdeaEvaluator(model_name)
-            scored_ideas = idea_evaluator.evaluate_ideas(ideas)
-            if not scored_ideas:
-                main_logger.error("No ideas were scored. Skipping this experiment run.")
-                print("No ideas were scored. Skipping this experiment run.")
-                continue
-            print(f"Evaluated {len(scored_ideas)} ideas")
+                # Step 2: Idea Evaluation
+                print("Evaluating ideas...")
+                idea_evaluator = IdeaEvaluator(model_name)
+                scored_ideas = idea_evaluator.evaluate_ideas(ideas)
+                if not scored_ideas:
+                    main_logger.error(f"No ideas were scored in round {round + 1}. Continuing to next round.")
+                    print(f"No ideas were scored in round {round + 1}. Continuing to next round.")
+                    continue
+                print(f"Evaluated {len(scored_ideas)} ideas")
 
-            # Select the best idea based on the highest score
-            best_idea = max(scored_ideas, key=lambda x: x['score'])
+                # Select the best idea based on the highest score
+                round_best_idea = max(scored_ideas, key=lambda x: x['score'])
+                main_logger.info(f"Round {round + 1} Best Idea: {round_best_idea['idea']} with score {round_best_idea['score']}")
+                print(f"Round {round + 1} Best Idea: {round_best_idea['idea']} with score {round_best_idea['score']}")
+
+                if round_best_idea['score'] > 8.5:
+                    best_idea = round_best_idea
+                    break
+                elif round == max_rounds - 1 or (best_idea is None or round_best_idea['score'] > best_idea['score']):
+                    best_idea = round_best_idea
+
+            if best_idea is None:
+                main_logger.error("Failed to generate any valid ideas after 10 rounds. Skipping this experiment run.")
+                print("Failed to generate any valid ideas after 10 rounds. Skipping this experiment run.")
+                continue
+
             main_logger.info(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
             print(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
 
@@ -95,24 +115,31 @@ def main():
                 main_logger.error("Failed to design experiment. Skipping this experiment run.")
                 print("Failed to design experiment. Skipping this experiment run.")
                 continue
+
+            # Safety check
+            if not safety_checker.check_experiment_plan(experiment_plan):
+                main_logger.error("Experiment plan failed safety check. Skipping this experiment run.")
+                print("Experiment plan failed safety check. Skipping this experiment run.")
+                continue
+
             main_logger.info(f"Designed Experiment Plan: {experiment_plan}")
             print(f"Designed Experiment Plan: {experiment_plan}")
 
             # Step 4: Experiment Execution
             print("Executing experiment...")
             experiment_executor = ExperimentExecutor(model_name)
-            initial_results = experiment_executor.execute_experiment(experiment_plan)
-            if not initial_results:
+            results = experiment_executor.execute_experiment(experiment_plan)
+            if not results:
                 main_logger.error("Failed to execute experiment. Skipping this experiment run.")
                 print("Failed to execute experiment. Skipping this experiment run.")
                 continue
-            main_logger.info(f"Initial Execution Results: {initial_results}")
-            print(f"Initial Execution Results: {initial_results}")
+            main_logger.info(f"Execution Results: {results}")
+            print(f"Execution Results: {results}")
 
             # Step 5: Feedback Loop
             print("Refining experiment plan...")
             feedback_loop = FeedbackLoop(model_name)
-            refined_plan = feedback_loop.refine_experiment(experiment_plan, initial_results)
+            refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
             if not refined_plan:
                 main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
                 print("Failed to refine experiment plan. Skipping this experiment run.")

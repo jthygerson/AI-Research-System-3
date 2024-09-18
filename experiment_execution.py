@@ -1,49 +1,63 @@
 # experiment_execution.py
 
 import os
+import subprocess
+import requests
+import openai
 from utils.logger import setup_logger
-from utils.openai_utils import create_completion
-from utils.config import initialize_openai
+from utils.resource_manager import ResourceManager
 
 class ExperimentExecutor:
     def __init__(self, model_name):
-        initialize_openai()  # Initialize OpenAI API key
         self.model_name = model_name
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
+        self.resource_manager = ResourceManager()
 
     def execute_experiment(self, experiment_plan):
-        """
-        Executes the experiment as per the plan.
-        """
         self.logger.info("Executing experiment...")
         try:
-            prompt = (
-                f"Execute the following experiment plan step by step and report the outcomes of each step:\n\n{experiment_plan}"
-            )
+            results = []
+            for step in experiment_plan:
+                step_result = self.execute_step(step)
+                results.append(step_result)
+                self.logger.info(f"Step result: {step_result}")
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
-            
-            if is_chat_model:
-                response = create_completion(
-                    self.model_name,
-                    messages=[
-                        {"role": "system", "content": "You are an AI experiment executor."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=1000,
-                    temperature=0.7,
-                )
-            else:
-                response = create_completion(
-                    self.model_name,
-                    prompt=prompt,
-                    max_tokens=1000,
-                    temperature=0.7,
-                )
-            
-            self.logger.info(f"Experiment execution results: {response}")
-            return response
+            self.logger.info(f"Experiment execution results: {results}")
+            return results
         except Exception as e:
             self.logger.error(f"Error executing experiment: {e}")
-            return ""
+            return []
+
+    def execute_step(self, step):
+        action = step.get('action')
+        if action == 'run_python_code':
+            return self.run_python_code(step.get('code'))
+        elif action == 'use_llm_api':
+            return self.use_llm_api(step.get('prompt'))
+        elif action == 'web_request':
+            return self.make_web_request(step.get('url'), step.get('method', 'GET'))
+        elif action == 'use_gpu':
+            return self.use_gpu(step.get('task'))
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    def run_python_code(self, code):
+        # CAUTION: Running arbitrary code can be dangerous
+        # Implement strict sandboxing and validation here
+        result = subprocess.run(['python', '-c', code], capture_output=True, text=True)
+        return {'stdout': result.stdout, 'stderr': result.stderr}
+
+    def use_llm_api(self, prompt):
+        # Use the OpenAI API or any other LLM API
+        response = create_completion(self.model_name, prompt=prompt, max_tokens=100)
+        return response
+
+    def make_web_request(self, url, method='GET'):
+        # Implement rate limiting and respect robots.txt
+        response = requests.request(method, url)
+        return {'status_code': response.status_code, 'content': response.text}
+
+    def use_gpu(self, task):
+        # Implement GPU task execution
+        # This is a placeholder and would need to be implemented based on your specific GPU tasks
+        return self.resource_manager.execute_gpu_task(task)
