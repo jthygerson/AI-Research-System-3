@@ -97,7 +97,11 @@ def main():
 
             if best_idea is None:
                 main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
-                best_idea = max(all_generated_ideas, key=lambda x: x['score'])
+                if all_generated_ideas:
+                    best_idea = max(all_generated_ideas, key=lambda x: x['score'])
+                else:
+                    main_logger.error("No ideas were generated. Skipping this experiment run.")
+                    continue
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
 
@@ -106,14 +110,15 @@ def main():
                 for idea in all_generated_ideas:
                     f.write(f"{idea}\n")
 
-            # Reset state for the next experiment run
-            best_idea = None
-            all_generated_ideas = []
-
             # Step 3: Experiment Design
             main_logger.info("Designing experiment...")
             experiment_designer = ExperimentDesigner(model_name)
-            experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
+            if best_idea and 'idea' in best_idea:
+                experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
+            else:
+                main_logger.error("No valid best idea found or 'idea' key is missing.")
+                experiment_plan = []
+
             if not experiment_plan:
                 main_logger.error("Failed to design experiment. Skipping this experiment run.")
                 continue
@@ -124,6 +129,10 @@ def main():
                 continue
 
             main_logger.info("Experiment plan designed successfully.")
+
+            # Reset state for the next experiment run
+            best_idea = None
+            all_generated_ideas = []
 
             # Step 4: Experiment Execution
             main_logger.info("Executing experiment...")
