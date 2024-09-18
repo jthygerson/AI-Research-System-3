@@ -49,7 +49,7 @@ class IdeaEvaluator:
                     "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score. Return the result as a JSON object with 'scores' and 'justifications' keys.",
                     "output_format": "JSON"
                 }
-
+                
                 response = create_completion(
                     self.model_name,
                     messages=[
@@ -60,26 +60,34 @@ class IdeaEvaluator:
                     temperature=0.7
                 )
                 
-                self.logger.debug(f"Raw API response for idea '{idea}': {response}")
+                self.logger.debug(f"Raw API response for idea '{idea[:50]}...': {response}")
 
                 try:
                     evaluation_data = json.loads(response)
-                    scores = evaluation_data.get('scores', [])
-                    scores = [int(score) if isinstance(score, (int, str)) and score.isdigit() else 0 for score in scores]
+                    scores = evaluation_data.get('scores', {})
+                    self.logger.debug(f"Parsed scores: {scores}")
+                    
+                    total_score = sum(int(score) for score in scores.values() if isinstance(score, (int, str)) and str(score).isdigit())
                     justifications = evaluation_data.get('justifications', {})
+                    
+                    self.logger.info(f"Total score for idea '{idea[:50]}...': {total_score}")
+                    scored_ideas.append({
+                        'idea': idea,
+                        'score': total_score,
+                        'justifications': justifications
+                    })
                 except json.JSONDecodeError:
                     self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                     scores, justifications = self.parse_text_evaluation(response)
-
-                total_score = sum(scores)
-                scored_ideas.append({
-                    'idea': idea,
-                    'score': total_score,
-                    'justifications': justifications
-                })
+                    total_score = sum(scores)
+                    scored_ideas.append({
+                        'idea': idea,
+                        'score': total_score,
+                        'justifications': justifications
+                    })
 
             except Exception as e:
-                self.logger.error(f"Error evaluating idea '{idea}': {str(e)}")
+                self.logger.error(f"Error evaluating idea '{idea[:50]}...': {str(e)}")
                 self.logger.error(traceback.format_exc())
 
         return scored_ideas
@@ -89,11 +97,14 @@ class IdeaEvaluator:
         justifications = {}
         current_criterion = ""
         for line in response.split('\n'):
-            if line.strip().startswith("Criterion"):
-                current_criterion = line.strip().split(':')[0]
-                score_match = re.search(r'Score: (\d+)', line)
-                if score_match:
-                    scores.append(int(score_match.group(1)))
-            elif line.strip().startswith("Justification:"):
-                justifications[current_criterion] = line.strip()[14:]
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                if key in self.criteria:
+                    current_criterion = key
+                    score_match = re.search(r'\d+', value)
+                    if score_match:
+                        scores.append(int(score_match.group()))
+                    justifications[current_criterion] = value
         return scores, justifications
