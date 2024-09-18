@@ -63,7 +63,9 @@ def main():
             main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
 
             best_idea = None
-            max_rounds = 3
+            max_rounds = 5  # Increased max rounds to allow for more attempts
+            all_ideas = []
+
             for round in range(max_rounds):
                 main_logger.info(f"Idea generation round {round + 1}/{max_rounds}")
                 
@@ -74,12 +76,13 @@ def main():
                     main_logger.info(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     continue
                 main_logger.info(f"Generated {len(ideas)} ideas")
+                all_ideas.extend(ideas)
 
                 # Step 2: Idea Evaluation
                 idea_evaluator = IdeaEvaluator(model_name)
-                scored_ideas = idea_evaluator.evaluate_ideas(ideas)
+                scored_ideas = idea_evaluator.evaluate_ideas(all_ideas)
                 if not scored_ideas:
-                    main_logger.info(f"No ideas were scored in round {round + 1}. Continuing to next round.")
+                    main_logger.info("No ideas were scored. Continuing to next round.")
                     continue
                 main_logger.info(f"Evaluated {len(scored_ideas)} ideas")
 
@@ -87,14 +90,15 @@ def main():
                 round_best_idea = max(scored_ideas, key=lambda x: x['score'])
                 main_logger.info(f"Best idea score: {round_best_idea['score']:.2f}")
 
-                if round_best_idea['score'] > 85:
+                if round_best_idea['score'] > 80:
                     best_idea = round_best_idea
+                    main_logger.info(f"Found idea with score above 80. Stopping idea generation.")
                     break
                 elif round == max_rounds - 1 or (best_idea is None or round_best_idea['score'] > best_idea['score']):
                     best_idea = round_best_idea
 
             if best_idea is None:
-                main_logger.warning("Failed to generate any valid ideas after 3 rounds. Skipping this experiment run.")
+                main_logger.warning("Failed to generate any valid ideas after maximum rounds. Skipping this experiment run.")
                 continue
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
