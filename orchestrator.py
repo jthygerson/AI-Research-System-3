@@ -76,6 +76,7 @@ def main():
                     main_logger.error(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     print(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     continue
+                main_logger.info(f"Generated {len(ideas)} ideas")
                 print(f"Generated {len(ideas)} ideas")
 
                 # Step 2: Idea Evaluation
@@ -86,6 +87,7 @@ def main():
                     main_logger.error(f"No ideas were scored in round {round + 1}. Continuing to next round.")
                     print(f"No ideas were scored in round {round + 1}. Continuing to next round.")
                     continue
+                main_logger.info(f"Evaluated {len(scored_ideas)} ideas")
                 print(f"Evaluated {len(scored_ideas)} ideas")
 
                 # Select the best idea based on the highest score

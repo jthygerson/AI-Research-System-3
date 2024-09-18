@@ -46,6 +46,10 @@ class IdeaGenerator:
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
             is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
             
+            self.logger.info(f"Calling OpenAI API with model: {self.model_name}")
+            self.logger.info(f"Is chat model: {is_chat_model}")
+            self.logger.info(f"Prompt: {json.dumps(prompt, indent=2)}")
+            
             if is_chat_model:
                 response = create_completion(
                     self.model_name,
@@ -64,6 +68,8 @@ class IdeaGenerator:
                     temperature=0.7
                 )
             
+            self.logger.info(f"Raw API response: {response}")
+            
             # Parse the JSON response
             ideas_data = json.loads(response)
             ideas = ideas_data.get('ideas', [])
@@ -72,6 +78,7 @@ class IdeaGenerator:
             return ideas
         except json.JSONDecodeError as e:
             self.logger.error(f"Error decoding JSON response: {str(e)}")
+            self.logger.error(f"Raw response causing the error: {response}")
             return []
         except openai.OpenAIError as e:
             self.logger.error(f"OpenAI API error: {str(e)}")

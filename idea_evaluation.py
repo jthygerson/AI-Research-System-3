@@ -57,6 +57,11 @@ class IdeaEvaluator:
                     "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score."
                 }
 
+                self.logger.info(f"Evaluating idea: {idea}")
+                self.logger.info(f"Calling OpenAI API with model: {self.model_name}")
+                self.logger.info(f"Is chat model: {is_chat_model}")
+                self.logger.info(f"Prompt: {json.dumps(prompt, indent=2)}")
+
                 is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
                 
                 if is_chat_model:
@@ -77,8 +82,7 @@ class IdeaEvaluator:
                         temperature=0.7
                     )
                 
-                # Log the raw response for debugging
-                self.logger.debug(f"Raw response for idea '{idea}': {response}")
+                self.logger.info(f"Raw API response for idea '{idea}': {response}")
 
                 # Parse JSON response
                 try:
@@ -103,7 +107,7 @@ class IdeaEvaluator:
                     self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
                 except json.JSONDecodeError as e:
                     self.logger.error(f"Failed to parse evaluation response for idea '{idea}': {e}")
-                    self.logger.error(f"Raw response: {response}")  # Log the raw response for debugging
+                    self.logger.error(f"Raw response causing the error: {response}")
                     evaluated_idea = {
                         'idea': idea, 
                         'score': 1,  # Lowest possible score as a fallback
