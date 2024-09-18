@@ -76,10 +76,13 @@ class IdeaGenerator:
                 ideas_data = json.loads(response)
                 ideas = ideas_data.get('ideas', [])
             except json.JSONDecodeError:
+                self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 # If it's not JSON, try to parse the text response
                 ideas = self.parse_text_response(response)
 
             self.logger.info(f"Generated {len(ideas)} ideas")
+            if not ideas:
+                self.logger.warning("No ideas were generated")
             return ideas
         except Exception as e:
             error_message = f"Error generating ideas: {str(e)}"
