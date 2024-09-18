@@ -11,20 +11,21 @@ import logging
 from utils.json_utils import parse_llm_response
 
 class IdeaGenerator:
-    openai_initialized = False
-
     def __init__(self, model_name, num_ideas):
-        if not IdeaGenerator.openai_initialized:
-            initialize_openai()  # Initialize OpenAI API key
-            IdeaGenerator.openai_initialized = True
         self.model_name = model_name
         self.num_ideas = num_ideas
         self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.ERROR)
+        self.initialize_openai()  # Call this method in the constructor
+
+    def initialize_openai(self):
+        self.logger.info("Initializing OpenAI client for IdeaGenerator")
+        initialize_openai()  # This should reinitialize the OpenAI client
 
     def generate_ideas(self):
         """
         Generates research ideas using the OpenAI API.
         """
+        self.initialize_openai()  # Reinitialize before generating ideas
         self.logger.info("Generating ideas...")
         try:
             prompt = {

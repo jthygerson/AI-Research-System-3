@@ -67,8 +67,8 @@ def main():
             # Reset state for the new experiment run
             best_idea = None
             current_run_ideas = []
-            evaluated_ideas = set()  # Reset for each run
 
+            # Create new instances for each run
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 
@@ -80,14 +80,7 @@ def main():
             # Evaluate all generated ideas
             main_logger.info("Evaluating ideas...")
             for idea in generated_ideas:
-                idea_hash = hashlib.md5(idea.encode()).hexdigest()
-                if idea_hash in evaluated_ideas:
-                    main_logger.info(f"Skipping already evaluated idea: {idea[:50]}...")
-                    continue
-
                 scored_idea = idea_evaluator.evaluate_ideas([idea])[0]
-                evaluated_ideas.add(idea_hash)
-
                 current_run_ideas.append(scored_idea)
                 main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
                 

@@ -13,19 +13,20 @@ import traceback  # Import traceback module for logging full error stack
 import openai
 
 class IdeaEvaluator:
-    openai_initialized = False
-
     def __init__(self, model_name):
-        if not IdeaEvaluator.openai_initialized:
-            initialize_openai()  # Initialize OpenAI API key
-            IdeaEvaluator.openai_initialized = True
         self.model_name = model_name
         self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
+        self.initialize_openai()  # Call this method in the constructor
+
+    def initialize_openai(self):
+        self.logger.info("Initializing OpenAI client for IdeaEvaluator")
+        initialize_openai()  # This should reinitialize the OpenAI client
 
     def evaluate_ideas(self, ideas):
         """
         Evaluates ideas based on multiple criteria.
         """
+        self.initialize_openai()  # Reinitialize before evaluating ideas
         self.logger.debug("Evaluating ideas...")
         scored_ideas = []
         
