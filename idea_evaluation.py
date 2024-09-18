@@ -33,11 +33,15 @@ class IdeaEvaluator:
             list: List of dictionaries with idea, score, and justifications.
         """
         self.logger.info("Evaluating ideas...")
-        try:
-            evaluated_ideas = []
-            for i, idea in enumerate(ideas, 1):
-                idea_start_time = time.time()
-                
+        scored_ideas = []
+        chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
+        is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+        
+        self.logger.info(f"Calling OpenAI API with model: {self.model_name}")
+        self.logger.info(f"Is chat model: {is_chat_model}")
+
+        for idea in ideas:
+            try:
                 prompt = {
                     "task": "evaluate_research_idea",
                     "idea": idea,
@@ -58,12 +62,8 @@ class IdeaEvaluator:
                 }
 
                 self.logger.info(f"Evaluating idea: {idea}")
-                self.logger.info(f"Calling OpenAI API with model: {self.model_name}")
-                self.logger.info(f"Is chat model: {is_chat_model}")
                 self.logger.info(f"Prompt: {json.dumps(prompt, indent=2)}")
 
-                is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
-                
                 if is_chat_model:
                     response = create_completion(
                         self.model_name,
@@ -104,12 +104,13 @@ class IdeaEvaluator:
                 
                 self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
             
-            return evaluated_ideas
-        except Exception as e:
-            error_message = f"Error evaluating ideas: {str(e)}"
-            self.logger.error(error_message)
-            self.logger.error(traceback.format_exc())
-            return []
+            except Exception as e:
+                error_message = f"Error evaluating ideas: {str(e)}"
+                self.logger.error(error_message)
+                self.logger.error(traceback.format_exc())
+                return []
+
+        return evaluated_ideas
 
     def parse_text_evaluation(self, response):
         scores = []
