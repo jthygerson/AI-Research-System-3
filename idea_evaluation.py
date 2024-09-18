@@ -39,29 +39,32 @@ class IdeaEvaluator:
             evaluated_ideas = []
             for idea in ideas:
                 idea_start_time = time.time()
-                prompt = (
-                    f"Evaluate the following idea on a scale of 1-10 for each of these criteria:\n"
-                    f"1. Potential to improve idea generation quality\n"
-                    f"2. Potential to enhance idea evaluation effectiveness\n"
-                    f"3. Potential to improve experiment design quality\n"
-                    f"4. Potential to increase experiment execution efficiency and accuracy\n"
-                    f"5. Potential to enhance application of research findings\n"
-                    f"6. Potential to improve system reliability and performance\n"
-                    f"7. Potential to enhance benchmark performance on coding tasks\n"
-                    f"8. Potential to improve report quality and comprehensiveness\n"
-                    f"9. Potential to increase log file error-checking accuracy\n"
-                    f"10. Potential to improve error fixing effectiveness\n\n"
-                    f"Idea: {idea}\n\n"
-                    f"Provide the scores and a brief justification for each criterion in JSON format. "
-                    f"Example format: {{'1': {{'score': 8, 'justification': 'Reason'}}, '2': {{'score': 7, 'justification': 'Reason'}}, ...}}"
-                )
+                prompt = {
+                    "task": "evaluate_research_idea",
+                    "idea": idea,
+                    "criteria": [
+                        "Potential to improve idea generation quality",
+                        "Potential to enhance idea evaluation effectiveness",
+                        "Potential to improve experiment design quality",
+                        "Potential to increase experiment execution efficiency and accuracy",
+                        "Potential to enhance application of research findings",
+                        "Potential to improve system reliability and performance",
+                        "Potential to enhance benchmark performance on coding tasks",
+                        "Potential to improve report quality and comprehensiveness",
+                        "Potential to increase log file error-checking accuracy",
+                        "Potential to improve error fixing effectiveness"
+                    ],
+                    "instructions": "Evaluate the given idea on a scale of 1-10 for each criterion. Provide a brief justification for each score."
+                }
+
+                is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
                 
-                if any(self.model_name.lower().startswith(model.lower()) for model in chat_models):
+                if is_chat_model:
                     response = create_completion(
                         self.model_name,
                         messages=[
                             {"role": "system", "content": "You are an AI research evaluator."},
-                            {"role": "user", "content": prompt}
+                            {"role": "user", "content": json.dumps(prompt)}
                         ],
                         max_tokens=1000,
                         temperature=0.7
@@ -69,7 +72,7 @@ class IdeaEvaluator:
                 else:
                     response = create_completion(
                         self.model_name,
-                        prompt=prompt,
+                        prompt=json.dumps(prompt),
                         max_tokens=1000,
                         temperature=0.7
                     )
@@ -79,22 +82,9 @@ class IdeaEvaluator:
 
                 # Parse JSON response
                 try:
-                    # Replace ast.literal_eval with json.loads for safer parsing
-                    evaluation_json = json.loads(response)
-                    scores = []
-                    justifications = {}
-                    for i in range(1, 11):
-                        criterion = str(i)
-                        try:
-                            scores.append(evaluation_json[criterion]['score'])
-                            justifications[criterion] = evaluation_json[criterion]['justification']
-                        except KeyError:
-                            self.logger.warning(f"Missing score for criterion {criterion}. Using second lowest score.")
-                            if len(scores) >= 2:
-                                scores.append(sorted(scores)[1])  # Add second lowest score
-                            else:
-                                scores.append(1)  # If less than 2 scores, use 1 as a fallback
-                            justifications[criterion] = "Score estimation due to parsing error."
+                    evaluation_data = json.loads(response)
+                    scores = [evaluation_data[f'criterion_{i+1}']['score'] for i in range(10)]
+                    justifications = {f'criterion_{i+1}': evaluation_data[f'criterion_{i+1}']['justification'] for i in range(10)}
                     
                     average_score = sum(scores) / len(scores)
                     

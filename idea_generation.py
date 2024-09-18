@@ -1,6 +1,7 @@
 # idea_generation.py
 
 import os
+import json
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -24,20 +25,23 @@ class IdeaGenerator:
         """
         self.logger.info("Generating ideas...")
         try:
-            prompt = (
-                f"Generate a list of {self.num_ideas} innovative research ideas focused on improving the AI Research System's performance in the following areas:\n"
-                "1. Quality of idea generation\n"
-                "2. Effectiveness of idea evaluation\n"
-                "3. Quality of experiment designs\n"
-                "4. Efficiency and accuracy of experiment executions\n"
-                "5. Application of research findings\n"
-                "6. System reliability and performance\n"
-                "7. Benchmark performance on coding tasks\n"
-                "8. Report quality and comprehensiveness\n"
-                "9. Log file error-checking accuracy\n"
-                "10. Effectiveness of error fixing\n"
-                "Each idea should be concise, clear, and directly related to improving one or more of these aspects."
-            )
+            prompt = {
+                "task": "generate_research_ideas",
+                "num_ideas": self.num_ideas,
+                "focus_areas": [
+                    "Quality of idea generation",
+                    "Effectiveness of idea evaluation",
+                    "Quality of experiment designs",
+                    "Efficiency and accuracy of experiment executions",
+                    "Application of research findings",
+                    "System reliability and performance",
+                    "Benchmark performance on coding tasks",
+                    "Report quality and comprehensiveness",
+                    "Log file error-checking accuracy",
+                    "Effectiveness of error fixing"
+                ],
+                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects."
+            }
             
             chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
             is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
@@ -47,7 +51,7 @@ class IdeaGenerator:
                     self.model_name,
                     messages=[
                         {"role": "system", "content": "You are an AI research assistant."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": json.dumps(prompt)}
                     ],
                     max_tokens=150 * self.num_ideas,
                     temperature=0.7
@@ -55,16 +59,20 @@ class IdeaGenerator:
             else:
                 response = create_completion(
                     self.model_name,
-                    prompt=prompt,
+                    prompt=json.dumps(prompt),
                     max_tokens=150 * self.num_ideas,
                     temperature=0.7
                 )
             
-            # Process ideas_text to extract individual ideas
-            ideas = [idea.strip() for idea in response.split('\n') if idea.strip()]
-            ideas = [idea.lstrip('- ').strip() for idea in ideas]
+            # Parse the JSON response
+            ideas_data = json.loads(response)
+            ideas = ideas_data.get('ideas', [])
+            
             self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error decoding JSON response: {str(e)}")
+            return []
         except openai.OpenAIError as e:
             self.logger.error(f"OpenAI API error: {str(e)}")
             return []
