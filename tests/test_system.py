@@ -51,7 +51,7 @@ class TestAIResearchSystem(unittest.TestCase):
     def test_evaluate_ideas_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = json.dumps({
-            "scores": [8, 7, 9],
+            "scores": ["8", "7", "9"],  # Scores as strings to test conversion
             "justifications": {
                 "criterion_1": "Justification 1",
                 "criterion_2": "Justification 2",

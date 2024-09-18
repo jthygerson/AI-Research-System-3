@@ -65,6 +65,7 @@ class IdeaEvaluator:
                 try:
                     evaluation_data = json.loads(response)
                     scores = evaluation_data.get('scores', [])
+                    scores = [int(score) for score in scores]  # Convert all scores to integers
                     justifications = evaluation_data.get('justifications', {})
                 except json.JSONDecodeError:
                     self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
