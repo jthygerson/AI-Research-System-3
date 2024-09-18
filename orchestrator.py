@@ -64,8 +64,6 @@ def main():
 
             best_idea = None
             max_rounds = 5  # Increased max rounds to allow for more attempts
-            all_ideas = []
-            scored_ideas = []
 
             for round in range(max_rounds):
                 main_logger.info(f"Idea generation round {round + 1}/{max_rounds}")
@@ -86,19 +84,15 @@ def main():
                     continue
                 main_logger.info(f"Evaluated {len(new_scored_ideas)} ideas")
                 
-                # Add new ideas and scores to the overall lists
-                all_ideas.extend(new_ideas)
-                scored_ideas.extend(new_scored_ideas)
-
-                # Select the best idea based on the highest score
-                round_best_idea = max(scored_ideas, key=lambda x: x['score'])
-                main_logger.info(f"Best idea score: {round_best_idea['score']:.2f}")
+                # Select the best idea from this round
+                round_best_idea = max(new_scored_ideas, key=lambda x: x['score'])
+                main_logger.info(f"Best idea score in this round: {round_best_idea['score']:.2f}")
 
                 if round_best_idea['score'] > 80:
                     best_idea = round_best_idea
                     main_logger.info(f"Found idea with score above 80. Stopping idea generation.")
                     break
-                elif round == max_rounds - 1 or (best_idea is None or round_best_idea['score'] > best_idea['score']):
+                elif best_idea is None or round_best_idea['score'] > best_idea['score']:
                     best_idea = round_best_idea
 
             if best_idea is None:
