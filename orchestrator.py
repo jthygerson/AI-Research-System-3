@@ -77,8 +77,7 @@ def main():
                     main_logger.info(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     continue
                 main_logger.info(f"Generated {len(new_ideas)} ideas")
-                all_ideas.extend(new_ideas)
-
+                
                 # Step 2: Idea Evaluation (only evaluate new ideas)
                 idea_evaluator = IdeaEvaluator(model_name)
                 new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
@@ -86,6 +85,9 @@ def main():
                     main_logger.info("No ideas were scored. Continuing to next round.")
                     continue
                 main_logger.info(f"Evaluated {len(new_scored_ideas)} ideas")
+                
+                # Add new ideas and scores to the overall lists
+                all_ideas.extend(new_ideas)
                 scored_ideas.extend(new_scored_ideas)
 
                 # Select the best idea based on the highest score
