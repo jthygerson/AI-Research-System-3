@@ -66,34 +66,26 @@ def main():
             best_idea = None
             all_generated_ideas = []
 
-            idea_generator = IdeaGenerator(model_name, 1)  # Generate one idea at a time
+            idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 
+            # Generate and evaluate ideas only once per experiment run
+            main_logger.info("Generating and evaluating ideas...")
             for _ in range(args.num_ideas):
-                main_logger.info("Generating idea...")
-
-                # Step 1: Idea Generation
-                new_ideas = idea_generator.generate_ideas()
-                if not new_ideas:
-                    main_logger.info("No ideas generated. Continuing to next iteration.")
-                    continue
-                main_logger.info(f"Generated idea: {new_ideas[0]}")
-                all_generated_ideas.append(new_ideas[0])
-
-                # Step 2: Idea Evaluation
-                new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
-                if not new_scored_ideas:
-                    main_logger.info("No ideas were scored. Continuing to next iteration.")
-                    continue
-                main_logger.info(f"Evaluated idea with score: {new_scored_ideas[0]['score']}")
-
-                # Check if the idea has a score greater than 80
-                if new_scored_ideas[0]['score'] > 80:
-                    best_idea = new_scored_ideas[0]
+                new_idea = idea_generator.generate_ideas()[0]  # Generate one idea at a time
+                main_logger.info(f"Generated idea: {new_idea[:50]}...")
+                
+                scored_idea = idea_evaluator.evaluate_ideas([new_idea])[0]
+                main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
+                
+                all_generated_ideas.append(scored_idea)
+                
+                if scored_idea['score'] > 80:
+                    best_idea = scored_idea
                     main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
                     break
-                elif best_idea is None or new_scored_ideas[0]['score'] > best_idea['score']:
-                    best_idea = new_scored_ideas[0]
+                elif best_idea is None or scored_idea['score'] > best_idea['score']:
+                    best_idea = scored_idea
 
             if best_idea is None:
                 main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
@@ -113,12 +105,7 @@ def main():
             # Step 3: Experiment Design
             main_logger.info("Designing experiment...")
             experiment_designer = ExperimentDesigner(model_name)
-            if best_idea and 'idea' in best_idea:
-                experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
-            else:
-                main_logger.error("No valid best idea found or 'idea' key is missing.")
-                experiment_plan = []
-
+            experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
             if not experiment_plan:
                 main_logger.error("Failed to design experiment. Skipping this experiment run.")
                 continue
