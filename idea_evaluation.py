@@ -9,6 +9,7 @@ from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import time
 from utils.constants import chat_models
+import traceback  # Import traceback module for logging full error stack
 
 class IdeaEvaluator:
     openai_initialized = False
@@ -77,7 +78,8 @@ class IdeaEvaluator:
 
                 # Parse JSON response
                 try:
-                    evaluation_json = ast.literal_eval(response)
+                    # Replace ast.literal_eval with json.loads for safer parsing
+                    evaluation_json = json.loads(response)
                     scores = []
                     justifications = {}
                     for i in range(1, 11):
@@ -114,7 +116,7 @@ class IdeaEvaluator:
                     evaluated_idea = {
                         'idea': idea, 
                         'score': 1,  # Lowest possible score as a fallback
-                        'justifications': {'error': 'Failed to parse response'}
+                        'justifications': {'error': f'Failed to parse response: {str(e)}'}
                     }
                     evaluated_ideas.append(evaluated_idea)
                     
@@ -130,5 +132,6 @@ class IdeaEvaluator:
         
             return evaluated_ideas
         except Exception as e:
-            self.logger.error(f"Error evaluating ideas: {e}")
+            self.logger.error(f"Error evaluating ideas: {str(e)}")
+            self.logger.error(traceback.format_exc())  # Log the full traceback for debugging
         return []
