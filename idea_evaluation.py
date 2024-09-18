@@ -87,30 +87,28 @@ class IdeaEvaluator:
                 # Parse response
                 try:
                     evaluation_data = json.loads(response)
-                    scores = [evaluation_data[f'criterion_{i+1}']['score'] for i in range(10)]
-                    justifications = {f'criterion_{i+1}': evaluation_data[f'criterion_{i+1}']['justification'] for i in range(10)}
+                    scores = []
+                    justifications = {}
+                    for i, criterion in enumerate(prompt['criteria'], 1):
+                        criterion_data = evaluation_data.get(f'criterion_{i}', {})
+                        scores.append(criterion_data.get('score', 0))
+                        justifications[f'criterion_{i}'] = criterion_data.get('justification', '')
                 except json.JSONDecodeError:
-                    # If it's not JSON, try to parse the text response
+                    self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                     scores, justifications = self.parse_text_evaluation(response)
 
-                average_score = sum(scores) / len(scores)
-
-                evaluated_idea = {
-                    'idea': idea, 
-                    'score': round(average_score, 2),
+                total_score = sum(scores)
+                scored_ideas.append({
+                    'idea': idea,
+                    'score': total_score,
                     'justifications': justifications
-                }
-                evaluated_ideas.append(evaluated_idea)
-                
-                self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
-            
-            except Exception as e:
-                error_message = f"Error evaluating ideas: {str(e)}"
-                self.logger.error(error_message)
-                self.logger.error(traceback.format_exc())
-                return []
+                })
 
-        return evaluated_ideas
+            except Exception as e:
+                self.logger.error(f"Error evaluating idea '{idea}': {str(e)}")
+                self.logger.error(traceback.format_exc())
+
+        return scored_ideas
 
     def parse_text_evaluation(self, response):
         scores = []

@@ -74,7 +74,8 @@ class IdeaGenerator:
             # Check if the response is a JSON string
             try:
                 ideas_data = json.loads(response)
-                ideas = ideas_data.get('ideas', [])
+                ideas = ideas_data.get('research_ideas', [])
+                ideas = [idea['description'] for idea in ideas if 'description' in idea]
             except json.JSONDecodeError:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 # If it's not JSON, try to parse the text response
