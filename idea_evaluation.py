@@ -10,7 +10,7 @@ from utils.config import initialize_openai
 import time
 from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
-from openai.error import OpenAIError  # Import OpenAI error module
+from openai import OpenAIError  # Import OpenAI error module
 
 class IdeaEvaluator:
     openai_initialized = False

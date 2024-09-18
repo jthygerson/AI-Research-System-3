@@ -4,8 +4,8 @@ import os
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+from openai import OpenAIError
 import traceback
-from openai.error import OpenAIError
 
 class IdeaGenerator:
     openai_initialized = False
