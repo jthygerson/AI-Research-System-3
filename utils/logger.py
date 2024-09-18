@@ -8,6 +8,9 @@ def setup_logger(name, log_file, level=logging.DEBUG, console_level=logging.INFO
     """To setup as many loggers as you want"""
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     
+    # Create logs directory if it doesn't exist
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    
     # File handler
     file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
     file_handler.setFormatter(formatter)
