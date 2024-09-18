@@ -58,7 +58,11 @@ class FeedbackLoop:
     def should_continue_refinement(self, old_plan, new_plan):
         """
         Determines whether to continue refining the experiment plan.
-        Implement logic based on your criteria.
         """
-        # Placeholder implementation
-        return old_plan != new_plan
+        # Example logic: Continue refinement if the new plan is significantly different from the old plan
+        return old_plan != new_plan and self._calculate_plan_difference(old_plan, new_plan) > 0.1
+
+    def _calculate_plan_difference(self, old_plan, new_plan):
+        # Implement logic to calculate the difference between two plans
+        # This is a placeholder and should be implemented based on your criteria
+        return 0.2  # Placeholder value

@@ -3,6 +3,7 @@
 import os
 from dotenv import load_dotenv
 import logging
+import openai
 
 # Setup a logger for config
 logger = logging.getLogger('config')
@@ -23,3 +24,7 @@ def initialize_openai():
         raise ValueError(error_msg)
     # No need to set openai.api_key here, as it will be handled by the OpenAI client
     logger.debug("OpenAI API key initialized successfully.")
+
+# Add more configuration options as needed
+MODEL_TEMPERATURE = float(os.getenv('MODEL_TEMPERATURE', 0.7))
+MAX_TOKENS = int(os.getenv('MAX_TOKENS', 1000))

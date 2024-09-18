@@ -4,7 +4,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-def setup_logger(name, log_file, level=logging.DEBUG, max_bytes=5*1024*1024, backup_count=5):
+def setup_logger(name, log_file, level=logging.INFO):
     """
     Sets up a logger with rotation. Ensures that multiple handlers are not added to the same logger
     and prevents log propagation to parent loggers to avoid duplicate logging.
@@ -28,10 +28,14 @@ def setup_logger(name, log_file, level=logging.DEBUG, max_bytes=5*1024*1024, bac
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if not logger.handlers:
-        handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.propagate = False  # Prevent logs from propagating to the root logger
+    handler = logging.FileHandler(log_file)
+    handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.addHandler(stream_handler)
+    logger.propagate = False  # Prevent logs from propagating to the root logger
 
     return logger

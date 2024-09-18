@@ -3,10 +3,12 @@
 import os
 import re  # Import regex module
 import json  # Import JSON module for parsing
+import ast  # Import AST module for safer parsing
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import time
+from utils.constants import chat_models
 
 class IdeaEvaluator:
     openai_initialized = False
@@ -70,9 +72,12 @@ class IdeaEvaluator:
                         temperature=0.7
                     )
                 
+                # Log the raw response for debugging
+                self.logger.debug(f"Raw response for idea '{idea}': {response}")
+
                 # Parse JSON response
                 try:
-                    evaluation_json = json.loads(response)
+                    evaluation_json = ast.literal_eval(response)
                     scores = []
                     justifications = {}
                     for i in range(1, 11):
@@ -105,6 +110,7 @@ class IdeaEvaluator:
                     self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
                 except json.JSONDecodeError as e:
                     self.logger.error(f"Failed to parse evaluation response for idea '{idea}': {e}")
+                    self.logger.error(f"Raw response: {response}")  # Log the raw response for debugging
                     evaluated_idea = {
                         'idea': idea, 
                         'score': 1,  # Lowest possible score as a fallback
