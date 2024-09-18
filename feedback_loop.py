@@ -4,6 +4,7 @@ import os
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+from utils.json_utils import parse_llm_response
 
 class FeedbackLoop:
     def __init__(self, model_name, max_iterations=3):
@@ -35,15 +36,16 @@ class FeedbackLoop:
                     temperature=0.7,
                 )
                 
-                self.logger.info(f"Refined experiment plan (Iteration {iteration+1}): {response}")
+                self.logger.info(f"Raw API response (Iteration {iteration+1}): {response}")
 
-                try:
-                    new_plan = json.loads(response)
+                parsed_response = parse_llm_response(response)
+                if parsed_response:
+                    new_plan = parsed_response
                     if self.should_continue_refinement(refined_plan, new_plan):
                         refined_plan = new_plan
                     else:
                         break
-                except json.JSONDecodeError:
+                else:
                     self.logger.warning("Failed to parse JSON response. Skipping this iteration.")
 
             return refined_plan

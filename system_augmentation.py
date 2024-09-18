@@ -8,6 +8,7 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 from utils.metrics import PerformanceMetrics, evaluate_system_performance, generate_performance_report, calculate_overall_performance_score
+from utils.json_utils import parse_llm_response
 
 class SystemAugmentor:
     def __init__(self, model_name):
@@ -52,10 +53,11 @@ class SystemAugmentor:
         }
         
         response = self._get_model_response(prompt)
-        try:
-            scores = json.loads(response)
-            scores = [score / 10 for score in scores]  # Convert to 0-1 scale
-        except json.JSONDecodeError:
+        parsed_response = parse_llm_response(response)
+        if parsed_response:
+            scores = parsed_response.get('scores', [])
+            scores = [float(score) / 10 for score in scores if isinstance(score, (int, float, str)) and str(score).replace('.', '').isdigit()]
+        else:
             self.logger.warning(f"Invalid JSON response: {response}")
             scores = []
         
@@ -85,10 +87,11 @@ class SystemAugmentor:
         }
         
         response = self._get_model_response(prompt)
-        try:
-            scores = json.loads(response)
-            scores = [score / 10 for score in scores]
-        except json.JSONDecodeError:
+        parsed_response = parse_llm_response(response)
+        if parsed_response:
+            scores = parsed_response.get('scores', [])
+            scores = [float(score) / 10 for score in scores if isinstance(score, (int, float, str)) and str(score).replace('.', '').isdigit()]
+        else:
             self.logger.warning(f"Invalid JSON response: {response}")
             scores = []
         
@@ -122,10 +125,11 @@ class SystemAugmentor:
         }
         
         response = self._get_model_response(prompt)
-        try:
-            scores = json.loads(response)
-            scores = [score / 10 for score in scores]
-        except json.JSONDecodeError:
+        parsed_response = parse_llm_response(response)
+        if parsed_response:
+            scores = parsed_response.get('scores', [])
+            scores = [float(score) / 10 for score in scores if isinstance(score, (int, float, str)) and str(score).replace('.', '').isdigit()]
+        else:
             self.logger.warning(f"Invalid JSON response: {response}")
             scores = []
         
@@ -163,10 +167,11 @@ class SystemAugmentor:
         }
         
         response = self._get_model_response(prompt)
-        try:
-            scores = json.loads(response)
-            scores = [score / 10 for score in scores]
-        except json.JSONDecodeError:
+        parsed_response = parse_llm_response(response)
+        if parsed_response:
+            scores = parsed_response.get('scores', [])
+            scores = [float(score) / 10 for score in scores if isinstance(score, (int, float, str)) and str(score).replace('.', '').isdigit()]
+        else:
             self.logger.warning(f"Invalid JSON response: {response}")
             scores = []
         

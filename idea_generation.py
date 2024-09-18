@@ -8,6 +8,7 @@ from utils.config import initialize_openai
 import openai
 import traceback
 import logging
+from utils.json_utils import parse_llm_response
 
 class IdeaGenerator:
     openai_initialized = False
@@ -42,9 +43,9 @@ class IdeaGenerator:
                     "Effectiveness of error fixing"
                 ],
                 "output_format": "JSON",
-                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output in JSON format with a 'research_ideas' key containing an array of idea objects, each with a 'description' field."
+                "instructions": "Generate innovative research ideas focused on improving the AI Research System's performance in the given areas. Each idea should be concise, clear, and directly related to improving one or more of these aspects. Provide the output as a valid JSON object with a 'research_ideas' key containing an array of idea objects, each with a 'description' field. Do not include any text outside of the JSON object."
             }
-            
+
             response = create_completion(
                 self.model_name,
                 messages=[
@@ -57,11 +58,11 @@ class IdeaGenerator:
             
             self.logger.info(f"Raw API response: {response}")
             
-            try:
-                ideas_data = json.loads(response)
-                ideas = ideas_data.get('research_ideas', [])
+            parsed_response = parse_llm_response(response)
+            if parsed_response:
+                ideas = parsed_response.get('research_ideas', [])
                 ideas = [idea['description'] for idea in ideas if 'description' in idea]
-            except json.JSONDecodeError:
+            else:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 ideas = self.parse_text_response(response)
 
@@ -77,14 +78,9 @@ class IdeaGenerator:
 
     def parse_text_response(self, response):
         ideas = []
-        current_idea = ""
-        for line in response.split('\n'):
-            if line.strip().startswith("### Idea"):
-                if current_idea:
-                    ideas.append(current_idea.strip())
-                current_idea = line + "\n"
-            else:
-                current_idea += line + "\n"
-        if current_idea:
-            ideas.append(current_idea.strip())
+        lines = response.strip().split('\n')
+        for line in lines:
+            if line.strip().startswith('"description":'):
+                idea = line.split(':', 1)[1].strip().strip('"').strip(',')
+                ideas.append(idea)
         return ideas

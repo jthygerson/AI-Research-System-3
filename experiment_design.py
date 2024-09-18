@@ -5,6 +5,7 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import json
+from utils.json_utils import parse_llm_response
 
 class ExperimentDesigner:
     def __init__(self, model_name):
@@ -50,10 +51,10 @@ class ExperimentDesigner:
             
             self.logger.debug(f"Raw API response: {response}")
 
-            try:
-                experiment_data = json.loads(response)
-                experiment_plan = experiment_data.get('experiment_plan', [])
-            except json.JSONDecodeError:
+            parsed_response = parse_llm_response(response)
+            if parsed_response:
+                experiment_plan = parsed_response.get('experiment_plan', [])
+            else:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 experiment_plan = self.parse_text_response(response)
 
@@ -61,6 +62,7 @@ class ExperimentDesigner:
             return experiment_plan
         except Exception as e:
             self.logger.error(f"Error designing experiment: {e}")
+            self.logger.error(traceback.format_exc())
             return []
 
     def parse_text_response(self, response):

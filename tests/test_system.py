@@ -1,5 +1,5 @@
 # tests/test_system.py
-
+from utils.json_utils import parse_llm_response
 import unittest
 from unittest.mock import patch, MagicMock
 from idea_generation import IdeaGenerator
@@ -46,6 +46,43 @@ class TestAIResearchSystem(unittest.TestCase):
         generator = IdeaGenerator('gpt-4', 3)
         ideas = generator.generate_ideas()
         self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
+
+    @patch('idea_generation.create_completion')
+    def test_generate_ideas_with_code_blocks(self, mock_create):
+        mock_create.return_value = '''```json
+        {
+          "research_ideas": [
+            {"description": "Idea 1"},
+            {"description": "Idea 2"},
+            {"description": "Idea 3"}
+          ]
+        }
+        ```'''
+        generator = IdeaGenerator('gpt-4', 3)
+        ideas = generator.generate_ideas()
+        self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
+
+    @patch('idea_generation.create_completion')
+    def test_generate_ideas_with_extra_text(self, mock_create):
+        mock_create.return_value = '''Here are some ideas:
+        {
+          "research_ideas": [
+            {"description": "Idea 1"},
+            {"description": "Idea 2"},
+            {"description": "Idea 3"}
+          ]
+        }
+        That's all for now.'''
+        generator = IdeaGenerator('gpt-4', 3)
+        ideas = generator.generate_ideas()
+        self.assertEqual(ideas, ['Idea 1', 'Idea 2', 'Idea 3'])
+
+    @patch('idea_generation.create_completion')
+    def test_generate_ideas_malformed_response(self, mock_create):
+        mock_create.return_value = 'This is not a valid JSON response.'
+        generator = IdeaGenerator('gpt-4', 3)
+        ideas = generator.generate_ideas()
+        self.assertEqual(ideas, [])
 
     @patch('idea_evaluation.create_completion')
     def test_evaluate_ideas_chat_model(self, mock_create):

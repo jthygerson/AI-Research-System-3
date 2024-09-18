@@ -4,6 +4,8 @@ import os
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+from utils.json_utils import parse_llm_response
+import traceback
 
 class ErrorFixer:
     def __init__(self, model_name):
@@ -17,38 +19,35 @@ class ErrorFixer:
         """
         self.logger.info("Fixing errors and warnings found in logs...")
         try:
-            prompt = (
-                f"The following errors and warnings were found in the system logs:\n\n{errors_warnings}\n\n"
-                "Provide specific code changes to fix these issues, including the file names and line numbers. "
-                "Ensure the changes improve the system's reliability and performance."
+            prompt = {
+                "task": "fix_errors",
+                "errors_warnings": errors_warnings,
+                "instructions": "Provide specific code changes to fix these issues, including the file names and line numbers. Ensure the changes improve the system's reliability and performance.",
+                "output_format": "JSON"
+            }
+            
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are a code fixer and system optimizer."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=1000,
+                temperature=0.7,
             )
             
-            chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
-            is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
+            self.logger.info(f"Raw API response: {response}")
             
-            if is_chat_model:
-                response = create_completion(
-                    self.model_name,
-                    messages=[
-                        {"role": "system", "content": "You are a code fixer and system optimizer."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=1000,
-                    temperature=0.7,
-                )
+            parsed_response = parse_llm_response(response)
+            if parsed_response:
+                self.logger.info(f"Suggested code fixes: {parsed_response}")
+                # Apply the code fixes
+                self.apply_code_fixes(json.dumps(parsed_response))
             else:
-                response = create_completion(
-                    self.model_name,
-                    prompt=prompt,
-                    max_tokens=1000,
-                    temperature=0.7,
-                )
-            
-            self.logger.info(f"Suggested code fixes: {response}")
-            # Apply the code fixes
-            self.apply_code_fixes(response)
+                self.logger.warning("Failed to parse the API response.")
         except Exception as e:
             self.logger.error(f"Error fixing errors: {e}")
+            self.logger.error(traceback.format_exc())
 
     def apply_code_fixes(self, fixes):
         """
