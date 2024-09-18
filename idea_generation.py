@@ -4,6 +4,8 @@ import os
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+import traceback
+from openai.error import OpenAIError
 
 class IdeaGenerator:
     openai_initialized = False
@@ -63,6 +65,10 @@ class IdeaGenerator:
             ideas = [idea.lstrip('- ').strip() for idea in ideas]
             self.logger.info(f"Generated {len(ideas)} ideas")
             return ideas
+        except OpenAIError as e:
+            self.logger.error(f"OpenAI API error: {str(e)}")
+            return []
         except Exception as e:
-            self.logger.error(f"Error generating ideas: {e}")
+            self.logger.error(f"Error generating ideas: {str(e)}")
+            self.logger.error(traceback.format_exc())
             return []
