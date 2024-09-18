@@ -26,6 +26,7 @@ from utils.safety_checker import SafetyChecker
 
 from utils.logger import setup_logger
 from utils.code_backup import backup_code, restore_code
+from utils.config import initialize_openai  # Add this import
 
 # Set up a dedicated debug logger
 debug_logger = logging.getLogger('debug')
