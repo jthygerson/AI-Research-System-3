@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import traceback
+import logging
 
 # Import all modules
 from idea_generation import IdeaGenerator
