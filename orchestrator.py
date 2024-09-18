@@ -26,7 +26,7 @@ def main():
     # Initialize argument parser
     parser = argparse.ArgumentParser(description='AI Research System Orchestrator')
     parser.add_argument('--model_name', type=str, required=True, help='Name of the OpenAI model to use')
-    parser.add_argument('--num_ideas', type=int, required=True, help='Number of ideas to generate')
+    parser.add_argument('--num_ideas', type=int, default=20, help='Maximum number of ideas to generate')
     parser.add_argument('--num_experiments', type=int, required=True, help='Number of experiment runs')
     args = parser.parse_args()
 
@@ -63,43 +63,48 @@ def main():
             main_logger.info(f"Starting experiment run {experiment_run + 1}/{args.num_experiments}")
 
             best_idea = None
-            max_rounds = 5  # Increased max rounds to allow for more attempts
+            all_generated_ideas = []
+            max_ideas = args.num_ideas
 
-            for round in range(max_rounds):
-                main_logger.info(f"Idea generation round {round + 1}/{max_rounds}")
+            idea_generator = IdeaGenerator(model_name, 1)  # Generate one idea at a time
+            idea_evaluator = IdeaEvaluator(model_name)
+
+            for _ in range(max_ideas):
+                main_logger.info("Generating idea...")
                 
                 # Step 1: Idea Generation
-                idea_generator = IdeaGenerator(model_name, args.num_ideas)
                 new_ideas = idea_generator.generate_ideas()
                 if not new_ideas:
-                    main_logger.info(f"No ideas generated in round {round + 1}. Continuing to next round.")
+                    main_logger.info("No ideas generated. Continuing to next iteration.")
                     continue
-                main_logger.info(f"Generated {len(new_ideas)} ideas")
+                main_logger.info(f"Generated idea: {new_ideas[0]}")
+                all_generated_ideas.append(new_ideas[0])
                 
-                # Step 2: Idea Evaluation (only evaluate new ideas)
-                idea_evaluator = IdeaEvaluator(model_name)  # Create a new instance for each round
+                # Step 2: Idea Evaluation
                 new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
                 if not new_scored_ideas:
-                    main_logger.info("No ideas were scored. Continuing to next round.")
+                    main_logger.info("No ideas were scored. Continuing to next iteration.")
                     continue
-                main_logger.info(f"Evaluated {len(new_scored_ideas)} ideas")
+                main_logger.info(f"Evaluated idea with score: {new_scored_ideas[0]['score']}")
                 
-                # Select the best idea from this round
-                round_best_idea = max(new_scored_ideas, key=lambda x: x['score'])
-                main_logger.info(f"Best idea score in this round: {round_best_idea['score']:.2f}")
-
-                if round_best_idea['score'] > 80:
-                    best_idea = round_best_idea
-                    main_logger.info(f"Found idea with score above 80. Stopping idea generation.")
+                # Check if the idea has a score greater than 80
+                if new_scored_ideas[0]['score'] > 80:
+                    best_idea = new_scored_ideas[0]
+                    main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
                     break
-                elif best_idea is None or round_best_idea['score'] > best_idea['score']:
-                    best_idea = round_best_idea
+                elif best_idea is None or new_scored_ideas[0]['score'] > best_idea['score']:
+                    best_idea = new_scored_ideas[0]
 
             if best_idea is None:
-                main_logger.warning("Failed to generate any valid ideas after maximum rounds. Skipping this experiment run.")
-                continue
+                main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
+                best_idea = max(all_generated_ideas, key=lambda x: x['score'])
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
+
+            # Log all generated ideas
+            with open('logs/all_ideas.log', 'a') as f:
+                for idea in all_generated_ideas:
+                    f.write(f"{idea}\n")
 
             # Step 3: Experiment Design
             main_logger.info("Designing experiment...")
