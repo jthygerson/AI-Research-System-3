@@ -41,7 +41,7 @@ def main():
         sys.exit(1)
 
     # Setup main logger
-    main_logger = setup_logger('main_logger', 'logs/main.log', log_to_console=False)
+    main_logger = setup_logger('main_logger', 'logs/main.log')
     main_logger.info(f"Starting AI Research System with model: {model_name}, {args.num_ideas} ideas, {args.num_experiments} experiments.")
     print(f"Starting AI Research System with model: {model_name}")
     print(f"Number of ideas to generate: {args.num_ideas}")
