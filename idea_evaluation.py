@@ -10,7 +10,7 @@ from utils.config import initialize_openai
 import time
 from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
-from openai import OpenAIError  # Import OpenAI error module
+import openai
 
 class IdeaEvaluator:
     openai_initialized = False
@@ -126,7 +126,7 @@ class IdeaEvaluator:
                     print(f"Score: {evaluated_idea['score']} (Error in evaluation)")
                     print("-" * 50)  # Separator for readability
                     
-                except OpenAIError as e:
+                except openai.OpenAIError as e:
                     self.logger.error(f"OpenAI API error for idea '{idea}': {str(e)}")
                     evaluated_idea = {
                         'idea': idea, 
