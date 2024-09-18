@@ -82,6 +82,8 @@ def main():
     safety_checker = SafetyChecker()
 
     try:
+        initialize_openai()  # Initialize OpenAI client once at the start
+        
         previous_performance = None
 
         all_idea_hashes = set()

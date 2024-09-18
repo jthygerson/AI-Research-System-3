@@ -5,6 +5,8 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response
+import json
+import traceback
 
 class FeedbackLoop:
     def __init__(self, model_name, max_iterations=3):

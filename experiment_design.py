@@ -59,6 +59,14 @@ class ExperimentDesigner:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 experiment_plan = self.parse_text_response(response)
 
+            # Check for required modules
+            required_modules = ['rpa']  # Add other required modules here
+            for module in required_modules:
+                try:
+                    __import__(module)
+                except ImportError:
+                    self.logger.warning(f"Required module '{module}' is not installed. Please install it before running the experiment.")
+
             # Fix indentation in generated Python code
             for step in experiment_plan:
                 if step['action'] == 'run_python_code':
