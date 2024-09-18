@@ -7,6 +7,7 @@ import openai
 from utils.logger import setup_logger
 from utils.resource_manager import ResourceManager
 import json
+from utils.openai_utils import create_completion  # Make sure this import exists
 
 class ExperimentExecutor:
     def __init__(self, model_name):

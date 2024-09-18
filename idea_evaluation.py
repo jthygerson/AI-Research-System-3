@@ -21,8 +21,10 @@ class IdeaEvaluator:
         self.initialize_openai()
 
     def initialize_openai(self):
-        self.logger.info("Initializing OpenAI client for IdeaEvaluator")
-        initialize_openai()  # This should reinitialize the OpenAI client
+        if not hasattr(self, 'openai_initialized'):
+            self.logger.info("Initializing OpenAI client for IdeaEvaluator")
+            initialize_openai()
+            self.openai_initialized = True
 
     def evaluate_ideas(self, ideas):
         """

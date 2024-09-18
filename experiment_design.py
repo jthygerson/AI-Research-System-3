@@ -6,6 +6,7 @@ from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import json
 from utils.json_utils import parse_llm_response
+import textwrap
 
 class ExperimentDesigner:
     def __init__(self, model_name):
@@ -57,6 +58,11 @@ class ExperimentDesigner:
             else:
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 experiment_plan = self.parse_text_response(response)
+
+            # Fix indentation in generated Python code
+            for step in experiment_plan:
+                if step['action'] == 'run_python_code':
+                    step['code'] = textwrap.dedent(step['code']).strip()
 
             self.logger.info(f"Experiment plan: {experiment_plan}")
             return experiment_plan
