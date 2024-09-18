@@ -105,7 +105,7 @@ def main():
                 continue
 
             main_logger.info(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
-            print(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
+            print(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
 
             # Step 3: Experiment Design
             print("Designing experiment...")
@@ -123,7 +123,7 @@ def main():
                 continue
 
             main_logger.info(f"Designed Experiment Plan: {experiment_plan}")
-            print(f"Designed Experiment Plan: {experiment_plan}")
+            print("Experiment plan designed successfully.")
 
             # Step 4: Experiment Execution
             print("Executing experiment...")
@@ -134,7 +134,7 @@ def main():
                 print("Failed to execute experiment. Skipping this experiment run.")
                 continue
             main_logger.info(f"Execution Results: {results}")
-            print(f"Execution Results: {results}")
+            print("Experiment executed successfully.")
 
             # Step 5: Feedback Loop
             print("Refining experiment plan...")
@@ -145,7 +145,7 @@ def main():
                 print("Failed to refine experiment plan. Skipping this experiment run.")
                 continue
             main_logger.info(f"Refined Experiment Plan: {refined_plan}")
-            print(f"Refined Experiment Plan: {refined_plan}")
+            print("Experiment plan refined successfully.")
 
             # Step 6: Refined Experiment Execution
             print("Executing refined experiment...")
@@ -155,7 +155,7 @@ def main():
                 print("Failed to execute refined experiment. Skipping this experiment run.")
                 continue
             main_logger.info(f"Final Execution Results: {final_results}")
-            print(f"Final Execution Results: {final_results}")
+            print("Refined experiment executed successfully.")
 
             # Step 7: System Augmentation
             print("Augmenting system...")
@@ -199,7 +199,7 @@ def main():
             log_error_checker = LogErrorChecker(model_name)
             errors_warnings = log_error_checker.check_logs('logs/main.log')
             main_logger.info(f"Log Analysis: {errors_warnings}")
-            print(f"Log Analysis: {errors_warnings}")
+            print(f"Log Analysis: {len(errors_warnings)} issues found")
 
             # Step 11: Error Fixing
             if errors_warnings:
