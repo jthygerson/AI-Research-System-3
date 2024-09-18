@@ -9,6 +9,7 @@ import hashlib
 import json
 import time
 import random  # Add this import
+import openai  # Add this import
 
 # Import all modules
 from idea_generation import IdeaGenerator
@@ -32,6 +33,15 @@ debug_logger.setLevel(logging.DEBUG)
 debug_handler = logging.FileHandler('logs/detailed_debug.log')
 debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 debug_logger.addHandler(debug_handler)
+
+api_call_history = []
+
+def log_api_call(model, prompt, response):
+    api_call_history.append({
+        'model': model,
+        'prompt': prompt,
+        'response': response
+    })
 
 def hash_idea(idea):
     return hashlib.md5(idea.encode()).hexdigest()
@@ -105,7 +115,7 @@ def main():
                     all_idea_hashes.add(idea_hash)
             
             # Log OpenAI API calls
-            debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(openai.api_requestor.APIRequestor.request_history)}")
+            debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(api_call_history)}")
             
             # Idea evaluation
             idea_evaluator = IdeaEvaluator(model_name)
