@@ -87,33 +87,15 @@ def main():
         all_idea_hashes = set()
 
         for experiment_run in range(args.num_experiments):
-            debug_logger.info(f"=============== Starting experiment run {experiment_run + 1} ===============")
+            print(f"\n--- Experiment Run {experiment_run + 1} ---")
             
-            # Log the state of the random number generator
-            debug_logger.debug(f"Random state before idea generation: {json.dumps(random.getstate())}")
-            
-            start_time = time.time()
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
-            debug_logger.info(f"IdeaGenerator instance created in {time.time() - start_time:.4f} seconds")
-            
-            debug_logger.debug(f"IdeaGenerator state: {json.dumps(idea_generator.__dict__, default=str)}")
-            
-            start_time = time.time()
             generated_ideas = idea_generator.generate_ideas()
-            generation_time = time.time() - start_time
-            debug_logger.info(f"Ideas generated in {generation_time:.4f} seconds")
             
-            debug_logger.debug(f"Generated ideas: {json.dumps(generated_ideas)}")
-            
-            for i, idea in enumerate(generated_ideas):
-                idea_hash = hash_idea(idea)
-                debug_logger.info(f"Run {experiment_run + 1}, Idea {i+1} Hash: {idea_hash}")
-                if idea_hash in all_idea_hashes:
-                    debug_logger.warning(f"Duplicate idea detected in run {experiment_run + 1}, Idea {i+1}")
-                    debug_logger.debug(f"Duplicate idea full text: {idea}")
-                else:
-                    all_idea_hashes.add(idea_hash)
-            
+            print(f"Generated {len(generated_ideas)} ideas:")
+            for i, idea in enumerate(generated_ideas, 1):
+                print(f"Idea {i}: {idea[:50]}...")  # Print first 50 characters of each idea
+
             # Log OpenAI API calls
             debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(api_call_history)}")
             
