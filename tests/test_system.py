@@ -53,22 +53,22 @@ class TestAIResearchSystem(unittest.TestCase):
     @patch('idea_evaluation.create_completion')
     def test_idea_evaluation_completion_model(self, mock_create):
         # Setup mock response for completion model
-        mock_create.return_value = '{"score": 8, "justification": "Innovative and feasible."}'
+        mock_create.return_value = '{"1": {"score": 8, "justification": "Innovative and feasible."}, "2": {"score": 8, "justification": "Reason"}, "3": {"score": 8, "justification": "Reason"}, "4": {"score": 8, "justification": "Reason"}, "5": {"score": 8, "justification": "Reason"}, "6": {"score": 8, "justification": "Reason"}, "7": {"score": 8, "justification": "Reason"}, "8": {"score": 8, "justification": "Reason"}, "9": {"score": 8, "justification": "Reason"}, "10": {"score": 8, "justification": "Reason"}}'
         evaluator = IdeaEvaluator('text-davinci-003')
         scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
         self.assertEqual(len(scored_ideas), 1)
-        self.assertEqual(scored_ideas[0]['score'], 8)
-        self.assertEqual(scored_ideas[0]['justification'], 'Innovative and feasible.')
+        self.assertEqual(scored_ideas[0]['score'], 8.0)
+        self.assertEqual(scored_ideas[0]['justifications']['1'], 'Innovative and feasible.')
 
     @patch('idea_evaluation.create_completion')
     def test_idea_evaluation_chat_model(self, mock_create):
         # Setup mock response for chat model
-        mock_create.return_value = '{"score": 9, "justification": "Highly novel and promising."}'
+        mock_create.return_value = '{"1": {"score": 9, "justification": "Highly novel and promising."}, "2": {"score": 9, "justification": "Reason"}, "3": {"score": 9, "justification": "Reason"}, "4": {"score": 9, "justification": "Reason"}, "5": {"score": 9, "justification": "Reason"}, "6": {"score": 9, "justification": "Reason"}, "7": {"score": 9, "justification": "Reason"}, "8": {"score": 9, "justification": "Reason"}, "9": {"score": 9, "justification": "Reason"}, "10": {"score": 9, "justification": "Reason"}}'
         evaluator = IdeaEvaluator('gpt-4')
         scored_ideas = evaluator.evaluate_ideas(['Test Idea'])
         self.assertEqual(len(scored_ideas), 1)
-        self.assertEqual(scored_ideas[0]['score'], 9)
-        self.assertEqual(scored_ideas[0]['justification'], 'Highly novel and promising.')
+        self.assertEqual(scored_ideas[0]['score'], 9.0)
+        self.assertEqual(scored_ideas[0]['justifications']['1'], 'Highly novel and promising.')
 
     # Tests for ExperimentDesigner
     @patch('experiment_design.create_completion')
