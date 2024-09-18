@@ -32,8 +32,6 @@ class IdeaEvaluator:
         Returns:
             list: List of dictionaries with idea, score, and justifications.
         """
-        start_time = time.time()
-        print("Evaluating ideas...")
         self.logger.info("Evaluating ideas...")
         try:
             evaluated_ideas = []
@@ -105,17 +103,12 @@ class IdeaEvaluator:
                 evaluated_ideas.append(evaluated_idea)
                 
                 self.logger.info(f"Idea: {idea}, Average Score: {average_score}, Justifications: {justifications}")
-                
-                # Update progress
-                print(f"\rEvaluated {i}/{len(ideas)} ideas", end="", flush=True)
             
-            print()  # New line after progress update
             return evaluated_ideas
         except Exception as e:
             error_message = f"Error evaluating ideas: {str(e)}"
             self.logger.error(error_message)
             self.logger.error(traceback.format_exc())
-            print(error_message)
             return []
 
     def parse_text_evaluation(self, response):

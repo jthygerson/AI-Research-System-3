@@ -62,38 +62,36 @@ def main():
     try:
         previous_performance = None
         for experiment_run in range(args.num_experiments):
+            print(f"\nExperiment run {experiment_run + 1}/{args.num_experiments}")
             main_logger.info(f"Starting experiment run {experiment_run + 1}")
-            print(f"\nStarting experiment run {experiment_run + 1}")
 
             best_idea = None
             max_rounds = 10
             for round in range(max_rounds):
+                print(f"Round {round + 1}/{max_rounds}")
+                
                 # Step 1: Idea Generation
-                print(f"Generating ideas (Round {round + 1})...")
                 idea_generator = IdeaGenerator(model_name, args.num_ideas)
                 ideas = idea_generator.generate_ideas()
                 if not ideas:
-                    main_logger.error(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     print(f"No ideas generated in round {round + 1}. Continuing to next round.")
+                    main_logger.error(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     continue
-                main_logger.info(f"Generated {len(ideas)} ideas")
                 print(f"Generated {len(ideas)} ideas")
 
                 # Step 2: Idea Evaluation
-                print("Evaluating ideas...")
                 idea_evaluator = IdeaEvaluator(model_name)
                 scored_ideas = idea_evaluator.evaluate_ideas(ideas)
                 if not scored_ideas:
-                    main_logger.error(f"No ideas were scored in round {round + 1}. Continuing to next round.")
                     print(f"No ideas were scored in round {round + 1}. Continuing to next round.")
+                    main_logger.error(f"No ideas were scored in round {round + 1}. Continuing to next round.")
                     continue
-                main_logger.info(f"Evaluated {len(scored_ideas)} ideas")
                 print(f"Evaluated {len(scored_ideas)} ideas")
 
                 # Select the best idea based on the highest score
                 round_best_idea = max(scored_ideas, key=lambda x: x['score'])
+                print(f"Best idea score: {round_best_idea['score']:.2f}")
                 main_logger.info(f"Round {round + 1} Best Idea: {round_best_idea['idea']} with score {round_best_idea['score']}")
-                print(f"Round {round + 1} Best Idea: {round_best_idea['idea']} with score {round_best_idea['score']}")
 
                 if round_best_idea['score'] > 8.5:
                     best_idea = round_best_idea
@@ -234,9 +232,10 @@ def main():
         print("\nAI Research System execution completed.")
 
     except Exception as e:
-        main_logger.error(f"Exception occurred: {str(e)}")
+        error_message = f"An error occurred during execution: {e}"
+        main_logger.error(error_message)
         main_logger.error(traceback.format_exc())
-        print(f"An error occurred during execution: {e}")
+        print(error_message)
 
         # Restore code from backup in case of critical failure
         if backup_path:
