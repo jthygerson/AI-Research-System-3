@@ -65,26 +65,28 @@ def main():
             best_idea = None
             max_rounds = 5  # Increased max rounds to allow for more attempts
             all_ideas = []
+            scored_ideas = []
 
             for round in range(max_rounds):
                 main_logger.info(f"Idea generation round {round + 1}/{max_rounds}")
                 
                 # Step 1: Idea Generation
                 idea_generator = IdeaGenerator(model_name, args.num_ideas)
-                ideas = idea_generator.generate_ideas()
-                if not ideas:
+                new_ideas = idea_generator.generate_ideas()
+                if not new_ideas:
                     main_logger.info(f"No ideas generated in round {round + 1}. Continuing to next round.")
                     continue
-                main_logger.info(f"Generated {len(ideas)} ideas")
-                all_ideas.extend(ideas)
+                main_logger.info(f"Generated {len(new_ideas)} ideas")
+                all_ideas.extend(new_ideas)
 
-                # Step 2: Idea Evaluation
+                # Step 2: Idea Evaluation (only evaluate new ideas)
                 idea_evaluator = IdeaEvaluator(model_name)
-                scored_ideas = idea_evaluator.evaluate_ideas(all_ideas)
-                if not scored_ideas:
+                new_scored_ideas = idea_evaluator.evaluate_ideas(new_ideas)
+                if not new_scored_ideas:
                     main_logger.info("No ideas were scored. Continuing to next round.")
                     continue
-                main_logger.info(f"Evaluated {len(scored_ideas)} ideas")
+                main_logger.info(f"Evaluated {len(new_scored_ideas)} ideas")
+                scored_ideas.extend(new_scored_ideas)
 
                 # Select the best idea based on the highest score
                 round_best_idea = max(scored_ideas, key=lambda x: x['score'])
