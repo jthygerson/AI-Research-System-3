@@ -42,7 +42,7 @@ def main():
         sys.exit(1)
 
     # Setup main logger
-    main_logger = setup_logger('main_logger', 'logs/main.log', level=logging.DEBUG)
+    main_logger = setup_logger('main_logger', 'logs/main.log', level=logging.DEBUG, console_level=logging.INFO)
     main_logger.info(f"Starting AI Research System with model: {model_name}, {args.num_ideas} ideas, {args.num_experiments} experiments.")
 
     # Backup code before starting

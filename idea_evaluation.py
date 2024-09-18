@@ -32,13 +32,13 @@ class IdeaEvaluator:
         Returns:
             list: List of dictionaries with idea, score, and justifications.
         """
-        self.logger.info("Evaluating ideas...")
+        self.logger.debug("Evaluating ideas...")
         scored_ideas = []
         chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-3.5-turbo-0301', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
         is_chat_model = any(self.model_name.lower().startswith(model.lower()) for model in chat_models)
         
-        self.logger.info(f"Calling OpenAI API with model: {self.model_name}")
-        self.logger.info(f"Is chat model: {is_chat_model}")
+        self.logger.debug(f"Calling OpenAI API with model: {self.model_name}")
+        self.logger.debug(f"Is chat model: {is_chat_model}")
 
         for idea in ideas:
             try:
@@ -61,8 +61,8 @@ class IdeaEvaluator:
                     "output_format": "JSON"
                 }
 
-                self.logger.info(f"Evaluating idea: {idea}")
-                self.logger.info(f"Prompt: {json.dumps(prompt, indent=2)}")
+                self.logger.debug(f"Evaluating idea: {idea}")
+                self.logger.debug(f"Prompt: {json.dumps(prompt, indent=2)}")
 
                 if is_chat_model:
                     response = create_completion(
@@ -82,7 +82,7 @@ class IdeaEvaluator:
                         temperature=0.7
                     )
                 
-                self.logger.info(f"Raw API response for idea '{idea}': {response}")
+                self.logger.debug(f"Raw API response for idea '{idea}': {response}")
 
                 # Parse response
                 try:
