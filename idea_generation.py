@@ -11,6 +11,8 @@ import logging
 from utils.json_utils import parse_llm_response
 from logging import getLogger
 
+logger = logging.getLogger(__name__)
+
 class IdeaGenerator:
     def __init__(self, model_name, num_ideas):
         self.model_name = model_name

@@ -1,6 +1,7 @@
 # utils/config.py
 
 import os
+import logging
 from openai import OpenAI
 
 # Setup a logger for config
@@ -18,6 +19,7 @@ def initialize_openai():
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
     OpenAI(api_key=api_key)
+    logger.info("OpenAI client initialized successfully")
 
 # Add more configuration options as needed
 MODEL_TEMPERATURE = float(os.getenv('MODEL_TEMPERATURE', 0.7))
