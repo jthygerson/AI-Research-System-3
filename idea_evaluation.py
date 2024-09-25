@@ -31,7 +31,9 @@ class IdeaEvaluator:
     def initialize_openai(cls):
         # Initialize the OpenAI client if it hasn't been done already
         if not cls.openai_initialized:
-            cls.logger.info("Initializing OpenAI client for IdeaEvaluator")
+            # Use a temporary logger for this method
+            temp_logger = setup_logger('idea_evaluation_temp', 'logs/idea_evaluation.log')
+            temp_logger.info("Initializing OpenAI client for IdeaEvaluator")
             initialize_openai()  # This function is imported from utils.config
             cls.openai_initialized = True
 
