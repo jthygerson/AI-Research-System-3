@@ -149,22 +149,27 @@ class ExperimentDesigner:
             prompt = {
                 "task": "fix_web_request",
                 "step": step,
-                "instructions": "Replace the example.com URL with a real, accessible URL that serves a similar purpose for the experiment."
+                "instructions": "Replace the example.com URL with a real, accessible URL that serves a similar purpose for the experiment. Respond with a JSON object containing the fixed step."
             }
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps."},
+                    {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps. Always respond with valid JSON."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=200,
                 temperature=0.7,
             )
             try:
+                self.logger.debug(f"LLM response for web request fix: {response}")
                 fixed_step = json.loads(response)
-                return fixed_step
-            except json.JSONDecodeError:
-                self.logger.error("Failed to parse LLM response for web request fix")
+                if isinstance(fixed_step, dict) and 'url' in fixed_step:
+                    return fixed_step
+                else:
+                    self.logger.error(f"Invalid structure in LLM response: {fixed_step}")
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse LLM response for web request fix: {e}")
+                self.logger.error(f"Raw response: {response}")
         return step
 
     def add_gpu_check(self, step):
