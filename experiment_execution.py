@@ -94,7 +94,7 @@ class ExperimentExecutor:
                 {"role": "system", "content": "You are an AI assistant helping with experiments."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=10000  # Increased to allow for longer responses
+            max_tokens=3500  # Increased to allow for longer responses
         )
         
         # Clean and parse the response
