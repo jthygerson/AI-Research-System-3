@@ -9,11 +9,22 @@ import json
 import traceback
 
 class FeedbackLoop:
-    def __init__(self, model_name, max_iterations=3):
-        initialize_openai()  # Initialize OpenAI API key
-        self.model_name = model_name
-        self.max_iterations = max_iterations
-        self.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log')
+    _instance = None
+
+    def __new__(cls, model_name, max_iterations=3):
+        if cls._instance is None:
+            cls._instance = super(FeedbackLoop, cls).__new__(cls)
+            cls._instance.model_name = model_name
+            cls._instance.max_iterations = max_iterations
+            cls._instance.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log')
+            cls._instance.initialize_openai()
+        return cls._instance
+
+    def initialize_openai(self):
+        if not hasattr(self, 'openai_initialized'):
+            self.logger.info("Initializing OpenAI client for FeedbackLoop")
+            initialize_openai()
+            self.openai_initialized = True
 
     def refine_experiment(self, experiment_plan, initial_results):
         self.logger.info("Refining experiment plan based on initial results...")

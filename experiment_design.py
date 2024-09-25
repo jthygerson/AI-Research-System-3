@@ -9,10 +9,21 @@ from utils.json_utils import parse_llm_response
 import textwrap
 
 class ExperimentDesigner:
-    def __init__(self, model_name):
-        initialize_openai()  # Initialize OpenAI API key
-        self.model_name = model_name
-        self.logger = setup_logger('experiment_design', 'logs/experiment_design.log')
+    _instance = None
+
+    def __new__(cls, model_name):
+        if cls._instance is None:
+            cls._instance = super(ExperimentDesigner, cls).__new__(cls)
+            cls._instance.model_name = model_name
+            cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log')
+            cls._instance.initialize_openai()
+        return cls._instance
+
+    def initialize_openai(self):
+        if not hasattr(self, 'openai_initialized'):
+            self.logger.info("Initializing OpenAI client for ExperimentDesigner")
+            initialize_openai()
+            self.openai_initialized = True
 
     def design_experiment(self, idea):
         self.logger.info(f"Designing experiment for idea: {idea}")
