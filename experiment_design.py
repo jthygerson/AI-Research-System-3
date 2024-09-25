@@ -7,6 +7,7 @@ from utils.config import initialize_openai
 import json
 from utils.json_utils import parse_llm_response
 import textwrap
+from pprint import pformat
 
 class ExperimentDesigner:
     _instance = None
@@ -83,7 +84,8 @@ class ExperimentDesigner:
                 if step['action'] == 'run_python_code':
                     step['code'] = textwrap.dedent(step['code']).strip()
 
-            self.logger.info(f"Experiment plan: {experiment_plan}")
+            self.logger.info(f"Experiment plan:")
+            self.pretty_print_experiment_plan(experiment_plan)
             return experiment_plan
         except Exception as e:
             self.logger.error(f"Error designing experiment: {e}")
@@ -94,3 +96,15 @@ class ExperimentDesigner:
         # Implement a method to parse non-JSON responses if needed
         # This is a placeholder and should be implemented based on the expected format of text responses
         return []
+
+    def pretty_print_experiment_plan(self, experiment_plan):
+        for i, step in enumerate(experiment_plan, 1):
+            self.logger.info(f"Step {i}:")
+            self.logger.info(f"  Action: {step['action']}")
+            for key, value in step.items():
+                if key != 'action':
+                    if isinstance(value, str) and len(value) > 100:
+                        self.logger.info(f"  {key.capitalize()}: (truncated) {value[:100]}...")
+                    else:
+                        self.logger.info(f"  {key.capitalize()}: {pformat(value, indent=4)}")
+            self.logger.info("")  # Add a blank line between steps
