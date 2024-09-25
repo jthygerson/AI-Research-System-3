@@ -81,7 +81,14 @@ class ExperimentExecutor:
 
     def use_llm_api(self, prompt):
         # Use the OpenAI API or any other LLM API
-        response = create_completion(self.model_name, prompt=prompt, max_tokens=100)
+        response = create_completion(
+            self.model_name,
+            messages=[
+                {"role": "system", "content": "You are an AI assistant helping with experiments."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=100
+        )
         
         # Clean and parse the response if it's in JSON format
         cleaned_response = response.strip()
