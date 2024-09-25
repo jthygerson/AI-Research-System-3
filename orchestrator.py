@@ -1,5 +1,6 @@
 # orchestrator.py
 
+# Import necessary standard libraries
 import os
 import sys
 import argparse
@@ -8,10 +9,11 @@ import logging
 import hashlib
 import json
 import time
-import random  # Add this import
-import openai  # Add this import
+import random
+import openai
+from openai import OpenAIError
 
-# Import all modules
+# Import custom modules for different stages of the AI research process
 from idea_generation import IdeaGenerator
 from idea_evaluation import IdeaEvaluator
 from experiment_design import ExperimentDesigner
@@ -24,20 +26,25 @@ from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 from utils.safety_checker import SafetyChecker
 
+# Import utility functions
 from utils.logger import setup_logger
 from utils.code_backup import backup_code, restore_code
-from utils.config import initialize_openai  # Add this import
+from utils.config import initialize_openai
 
-# Set up a dedicated debug logger
+# Set up a dedicated debug logger for detailed logging
 debug_logger = logging.getLogger('debug')
 debug_logger.setLevel(logging.DEBUG)
 debug_handler = logging.FileHandler('logs/detailed_debug.log')
 debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 debug_logger.addHandler(debug_handler)
 
+# Initialize a list to store API call history for debugging purposes
 api_call_history = []
 
 def log_api_call(model, prompt, response):
+    """
+    Log API calls for debugging and analysis.
+    """
     api_call_history.append({
         'model': model,
         'prompt': prompt,
@@ -45,32 +52,35 @@ def log_api_call(model, prompt, response):
     })
 
 def hash_idea(idea):
+    """
+    Generate a hash for an idea to check for duplicates.
+    """
     return hashlib.md5(idea.encode()).hexdigest()
 
 def main():
-    # Initialize argument parser
+    # Initialize argument parser for command-line options
     parser = argparse.ArgumentParser(description='AI Research System Orchestrator')
     parser.add_argument('--model_name', type=str, required=True, help='Name of the OpenAI model to use')
     parser.add_argument('--num_ideas', type=int, default=20, help='Maximum number of ideas to generate')
     parser.add_argument('--num_experiments', type=int, required=True, help='Number of experiment runs')
     args = parser.parse_args()
 
-    # Define supported models
+    # Define supported models for validation
     chat_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini']
     completion_models = ['text-davinci-003', 'text-curie-001', 'text-babbage-001', 'text-ada-001']
     supported_models = chat_models + completion_models
 
-    # Normalize and validate model name
+    # Normalize and validate the model name
     model_name = args.model_name.strip()
     if not any(model_name.lower().startswith(model.lower()) for model in supported_models):
         print(f"Error: Unsupported model_name '{model_name}'. Please choose a supported model.")
         sys.exit(1)
 
-    # Setup main logger
+    # Setup main logger for overall system logging
     main_logger = setup_logger('main_logger', 'logs/main.log', level=logging.DEBUG, console_level=logging.INFO)
     main_logger.info(f"Starting AI Research System with model: {model_name}, {args.num_ideas} ideas, {args.num_experiments} experiments.")
 
-    # Backup code before starting
+    # Backup code before starting to allow for reverting changes if needed
     backup_dir = 'code_backups'
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
@@ -80,56 +90,46 @@ def main():
     else:
         main_logger.error("Failed to back up code.")
 
+    # Initialize safety checker for experiment plans
     safety_checker = SafetyChecker()
 
     try:
-        initialize_openai()  # Initialize OpenAI client once at the start
+        # Initialize OpenAI client once at the start
+        initialize_openai()
         
+        # Initialize variable to store previous performance metrics
         previous_performance = None
 
+        # Set to store hashes of generated ideas to avoid duplicates
         all_idea_hashes = set()
 
+        # Main experiment loop
         for experiment_run in range(args.num_experiments):
             debug_logger.info(f"\n--- Experiment Run {experiment_run + 1} ---")
-            
-            idea_generator = IdeaGenerator(model_name, args.num_ideas)
-            generated_ideas = idea_generator.generate_ideas()
-            
-            debug_logger.info(f"Generated {len(generated_ideas)} ideas for run {experiment_run + 1}:")
-            for i, idea in enumerate(generated_ideas, 1):
-                debug_logger.info(f"Idea {i}: {idea[:50]}...")  # Log first 50 characters of each idea
-
-            # Log OpenAI API calls
-            debug_logger.debug(f"OpenAI API calls for this run: {json.dumps(api_call_history)}")
-            
-            # Idea evaluation
-            idea_evaluator = IdeaEvaluator(model_name)
-            debug_logger.debug(f"IdeaEvaluator state: {json.dumps(idea_evaluator.__dict__, default=str)}")
-            
-            for i, idea in enumerate(generated_ideas):
-                start_time = time.time()
-                scored_idea = idea_evaluator.evaluate_ideas([idea])[0]
-                evaluation_time = time.time() - start_time
-                debug_logger.info(f"Idea {i+1} evaluated in {evaluation_time:.4f} seconds")
-                debug_logger.debug(f"Scored idea: {json.dumps(scored_idea)}")
-            
-            # Log the state of the random number generator after all operations
-            debug_logger.debug(f"Random state after idea evaluation: {json.dumps(random.getstate())}")
-            
-            debug_logger.info(f"=============== Completed experiment run {experiment_run + 1} ===============\n")
 
             # Reset state for the new experiment run
             best_idea = None
             current_run_ideas = []
 
-            # Create a new IdeaGenerator instance for each run
+            # Create new instances for each run to ensure fresh state
             idea_generator = IdeaGenerator(model_name, args.num_ideas)
             idea_evaluator = IdeaEvaluator(model_name)
 
             # Generate new ideas for this run
             main_logger.info("Generating ideas for this experiment run...")
-            generated_ideas = idea_generator.generate_ideas()
-            main_logger.info(f"Generated {len(generated_ideas)} ideas for this run")
+            generated_ideas = []
+            while len(generated_ideas) < args.num_ideas:
+                new_ideas = idea_generator.generate_ideas()
+                for idea in new_ideas:
+                    idea_hash = hash_idea(idea)
+                    if idea_hash not in all_idea_hashes:
+                        all_idea_hashes.add(idea_hash)
+                        generated_ideas.append(idea)
+                        if len(generated_ideas) == args.num_ideas:
+                            break
+                if len(generated_ideas) == args.num_ideas:
+                    break
+            main_logger.info(f"Generated {len(generated_ideas)} unique ideas for this run")
 
             # Evaluate all generated ideas
             main_logger.info("Evaluating ideas...")
@@ -138,6 +138,7 @@ def main():
                 current_run_ideas.append(scored_idea)
                 main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
                 
+                # Select the best idea (score > 80 or highest score)
                 if scored_idea['score'] > 80:
                     best_idea = scored_idea
                     main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
@@ -145,6 +146,7 @@ def main():
                 elif best_idea is None or scored_idea['score'] > best_idea['score']:
                     best_idea = scored_idea
 
+            # Handle case where no valid ideas were generated
             if best_idea is None:
                 main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
                 if current_run_ideas:
@@ -168,7 +170,7 @@ def main():
                 main_logger.error("Failed to design experiment. Skipping this experiment run.")
                 continue
 
-            # Safety check
+            # Safety check for the experiment plan
             if not safety_checker.check_experiment_plan(experiment_plan):
                 main_logger.warning("Experiment plan failed safety check. Skipping this experiment run.")
                 continue
@@ -213,10 +215,12 @@ def main():
             current_performance = benchmarking.run_benchmarks()
             main_logger.info(f"Performance Metrics: {current_performance}")
 
+            # Compare current performance with previous performance
             if previous_performance:
                 improvement = compare_performance(previous_performance, current_performance)
                 main_logger.info(f"Performance Improvement: {improvement}")
 
+                # Revert changes if no improvement is detected
                 if not improvement:
                     main_logger.warning("No performance improvement detected. Reverting changes.")
                     if backup_path:
@@ -263,18 +267,46 @@ def main():
 
         main_logger.info("AI Research System execution completed.")
 
-    except Exception as e:
-        error_message = f"An error occurred during execution: {e}"
-        main_logger.error(error_message)
+    except OpenAIError as oe:
+        main_logger.error(f"OpenAI API error occurred: {oe}")
         main_logger.error(traceback.format_exc())
-
+    except ValueError as ve:
+        main_logger.error(f"Value error occurred: {ve}")
+        main_logger.error(traceback.format_exc())
+    except IOError as io:
+        main_logger.error(f"I/O error occurred: {io}")
+        main_logger.error(traceback.format_exc())
+    except Exception as e:
+        main_logger.error(f"An unexpected error occurred: {e}")
+        main_logger.error(traceback.format_exc())
+    finally:
         if backup_path:
             restore_code(backup_path, '.')
-            main_logger.info("Restored code from backup due to critical failure.")
+            main_logger.info("Restored code from backup due to error.")
 
 def compare_performance(previous, current):
-    # Implement logic to compare performance metrics
-    # Return True if there's an overall improvement, False otherwise
+    """
+    Compare current performance metrics with previous metrics.
+    This function will be used in the main experiment loop to determine if the system's
+    performance has improved after each iteration.
+
+    Args:
+    previous (dict): A dictionary containing the previous performance metrics.
+    current (dict): A dictionary containing the current performance metrics.
+
+    Returns:
+    bool: True if there's an overall improvement, False otherwise.
+
+    Note:
+    - This function will be called after each experiment run to compare the results.
+    - It will be used to decide whether to keep the changes made in the current iteration
+      or to revert to the previous state.
+    - The specific implementation of this function should consider various performance
+      metrics and their relative importance to determine overall improvement.
+    """
+    # TODO: Implement logic to compare performance metrics
+    # Consider using a weighted average of different metrics
+    # Return True if the overall performance has improved, False otherwise
     pass
 
 if __name__ == "__main__":
