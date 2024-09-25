@@ -30,6 +30,7 @@ from utils.safety_checker import SafetyChecker
 from utils.logger import setup_logger, ensure_log_file
 from utils.code_backup import backup_code, restore_code
 from utils.config import initialize_openai
+from utils.resource_manager import ResourceManager  # Add this import
 
 # Set up a dedicated debug logger for detailed logging
 debug_logger = logging.getLogger('debug')
@@ -94,6 +95,9 @@ def main():
 
     # Initialize safety checker for experiment plans
     safety_checker = SafetyChecker()
+
+    # Create a ResourceManager instance
+    resource_manager = ResourceManager()
 
     try:
         # Initialize OpenAI client once at the start
@@ -179,7 +183,7 @@ def main():
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")
-                experiment_executor = ExperimentExecutor(model_name)
+                experiment_executor = ExperimentExecutor(model_name, resource_manager)  # Pass resource_manager here
                 results = experiment_executor.execute_experiment(experiment_plan)
                 if not results:
                     main_logger.error("Failed to execute experiment. Skipping this experiment run.")
