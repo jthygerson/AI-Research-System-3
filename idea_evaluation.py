@@ -14,23 +14,25 @@ import openai
 from logging import getLogger
 
 class IdeaEvaluator:
-    openai_initialized = False
+    _instance = None
 
-    def __init__(self, model_name):
-        self.model_name = model_name
-        self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
-        self.debug_logger = setup_logger('debug', 'logs/detailed_debug.log')
-        self.initialize_openai()
+    def __new__(cls, model_name):
+        if cls._instance is None:
+            cls._instance = super(IdeaEvaluator, cls).__new__(cls)
+            cls._instance.model_name = model_name
+            cls._instance.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
+            cls._instance.debug_logger = setup_logger('debug', 'logs/detailed_debug.log')
+            cls._instance.initialize_openai()
+        return cls._instance
 
-    @classmethod
-    def initialize_openai(cls):
-        if not cls.openai_initialized:
-            temp_logger = setup_logger('idea_evaluation_temp', 'logs/idea_evaluation.log')
-            temp_logger.info("Initializing OpenAI client for IdeaEvaluator")
+    def initialize_openai(self):
+        if not hasattr(self, 'openai_initialized'):
+            self.logger.info("Initializing OpenAI client for IdeaEvaluator")
             initialize_openai()
-            cls.openai_initialized = True
+            self.openai_initialized = True
 
     def evaluate_ideas(self, ideas):
+        self.debug_logger.debug(f"Starting evaluation of {len(ideas)} ideas")
         self.logger.info(f"Evaluating {len(ideas)} ideas")
         scored_ideas = []
         
