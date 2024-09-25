@@ -4,3 +4,4 @@ numpy>=1.21.0
 python-dotenv>=0.19.0
 astor
 tenacity
+rpa>=1.0.0  # Add this line
