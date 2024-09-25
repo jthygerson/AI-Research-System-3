@@ -9,6 +9,7 @@ from utils.json_utils import parse_llm_response
 import textwrap
 from pprint import pformat
 import traceback  # Add this import at the top of the file
+import re  # Add this import at the top of the file
 
 class ExperimentDesigner:
     _instance = None
@@ -35,8 +36,9 @@ class ExperimentDesigner:
                 "idea": idea,
                 "instructions": (
                     "Design a concrete, executable experiment plan to test the given idea "
-                    "for improving AI-Research-System-3. The experiment plan should be a list of steps, "
-                    "where each step is a dictionary containing an 'action' key and any necessary parameters. "
+                    "for improving AI-Research-System-3. Provide the experiment plan as a valid JSON object "
+                    "with an 'experiment_plan' key containing a list of steps. Each step should be a dictionary "
+                    "with an 'action' key and any necessary parameters.\n\n"
                     "Possible actions include:\n"
                     "1. 'run_python_code': Execute Python code (provide 'code' parameter)\n"
                     "2. 'use_llm_api': Make a request to an LLM API (provide 'prompt' parameter)\n"
@@ -47,8 +49,34 @@ class ExperimentDesigner:
                     "2. Methodology: Steps to implement and test the idea\n"
                     "3. Resources required: Additional tools or data needed\n"
                     "4. Expected outcomes: Anticipated improvements in specific performance metrics\n"
-                    "5. Evaluation criteria: How to measure the success of the experiment\n"
-                    "Provide the experiment plan as a JSON object with an 'experiment_plan' key containing the list of steps."
+                    "5. Evaluation criteria: How to measure the success of the experiment\n\n"
+                    "Example of expected JSON format:\n"
+                    "{\n"
+                    "  \"experiment_plan\": [\n"
+                    "    {\n"
+                    "      \"action\": \"run_python_code\",\n"
+                    "      \"code\": \"import tensorflow as tf\\n# Rest of the code...\"\n"
+                    "    },\n"
+                    "    {\n"
+                    "      \"action\": \"use_llm_api\",\n"
+                    "      \"prompt\": \"Analyze the following experiment results...\"\n"
+                    "    },\n"
+                    "    {\n"
+                    "      \"action\": \"web_request\",\n"
+                    "      \"url\": \"https://api.example.com/data\",\n"
+                    "      \"method\": \"GET\"\n"
+                    "    },\n"
+                    "    {\n"
+                    "      \"action\": \"use_gpu\",\n"
+                    "      \"task\": \"Train neural network model XYZ\"\n"
+                    "    }\n"
+                    "  ],\n"
+                    "  \"objectives\": [\"Improve idea generation quality\", \"Enhance experiment execution efficiency\"],\n"
+                    "  \"resources_required\": [\"TensorFlow library\", \"GPU access\"],\n"
+                    "  \"expected_outcomes\": [\"20% increase in idea quality scores\", \"30% reduction in experiment execution time\"],\n"
+                    "  \"evaluation_criteria\": [\"Compare idea quality scores before and after implementation\", \"Measure average experiment execution time\"]\n"
+                    "}\n\n"
+                    "Ensure your response is a single, valid JSON object following this structure."
                 ),
                 "output_format": "JSON"
             }
@@ -56,7 +84,7 @@ class ExperimentDesigner:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a world-class computer scientist specializing in AI model and system improvement."},
+                    {"role": "system", "content": "You are a world-class computer scientist specializing in AI model and system improvement. Always respond with valid JSON exactly as specified in the instructions."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=2000,
@@ -104,10 +132,45 @@ class ExperimentDesigner:
             return None
 
     def parse_text_response(self, response):
-        # Implement a method to parse non-JSON responses if needed
-        # This is a placeholder and should be implemented based on the expected format of text responses
-        self.logger.warning("Text response parsing not implemented. Returning empty plan.")
-        return []
+        """
+        Parse a text response to extract the experiment plan.
+        """
+        self.logger.info("Parsing text response...")
+        experiment_plan = []
+        step_pattern = re.compile(r'Step (\d+):(.*?)(?=Step \d+:|$)', re.DOTALL)
+        steps = step_pattern.findall(response)
+
+        for step_num, step_content in steps:
+            action_match = re.search(r'Action: (\w+)', step_content)
+            if action_match:
+                action = action_match.group(1)
+                step = {'action': action}
+                
+                # Extract other parameters based on the action
+                if action == 'run_python_code':
+                    code_match = re.search(r'Code:(.*?)(?=\n\w+:|$)', step_content, re.DOTALL)
+                    if code_match:
+                        step['code'] = code_match.group(1).strip()
+                elif action == 'use_llm_api':
+                    prompt_match = re.search(r'Prompt:(.*?)(?=\n\w+:|$)', step_content, re.DOTALL)
+                    if prompt_match:
+                        step['prompt'] = prompt_match.group(1).strip()
+                elif action == 'web_request':
+                    url_match = re.search(r'URL: (.*?)(?=\n|$)', step_content)
+                    method_match = re.search(r'Method: (GET|POST|PUT|DELETE)', step_content)
+                    if url_match:
+                        step['url'] = url_match.group(1).strip()
+                    if method_match:
+                        step['method'] = method_match.group(1)
+                elif action == 'use_gpu':
+                    task_match = re.search(r'Task:(.*?)(?=\n\w+:|$)', step_content, re.DOTALL)
+                    if task_match:
+                        step['task'] = task_match.group(1).strip()
+                
+                experiment_plan.append(step)
+
+        self.logger.info(f"Parsed {len(experiment_plan)} steps from text response.")
+        return experiment_plan
 
     def pretty_print_experiment_plan(self, experiment_plan):
         for i, step in enumerate(experiment_plan, 1):
