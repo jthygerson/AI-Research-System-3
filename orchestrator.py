@@ -109,155 +109,166 @@ def main():
         for experiment_run in range(args.num_experiments):
             debug_logger.info(f"\n--- Experiment Run {experiment_run + 1} ---")
 
-            # Reset state for the new experiment run
-            best_idea = None
-            current_run_ideas = []
+            try:
+                # Reset state for the new experiment run
+                best_idea = None
+                current_run_ideas = []
 
-            # Create new instances for each run to ensure fresh state
-            idea_generator = IdeaGenerator(model_name, args.num_ideas)
-            idea_evaluator = IdeaEvaluator(model_name)
+                # Create new instances for each run to ensure fresh state
+                idea_generator = IdeaGenerator(model_name, args.num_ideas)
+                idea_evaluator = IdeaEvaluator(model_name)
 
-            # Generate new ideas for this run
-            main_logger.info("Generating ideas for this experiment run...")
-            generated_ideas = []
-            while len(generated_ideas) < args.num_ideas:
-                new_ideas = idea_generator.generate_ideas()
-                for idea in new_ideas:
-                    idea_hash = hash_idea(idea)
-                    if idea_hash not in all_idea_hashes:
-                        all_idea_hashes.add(idea_hash)
-                        generated_ideas.append(idea)
-                        if len(generated_ideas) == args.num_ideas:
-                            break
-                if len(generated_ideas) == args.num_ideas:
-                    break
-            main_logger.info(f"Generated {len(generated_ideas)} unique ideas for this run")
+                # Generate new ideas for this run
+                main_logger.info("Generating ideas for this experiment run...")
+                generated_ideas = []
+                while len(generated_ideas) < args.num_ideas:
+                    new_ideas = idea_generator.generate_ideas()
+                    for idea in new_ideas:
+                        idea_hash = hash_idea(idea)
+                        if idea_hash not in all_idea_hashes:
+                            all_idea_hashes.add(idea_hash)
+                            generated_ideas.append(idea)
+                            if len(generated_ideas) == args.num_ideas:
+                                break
+                    if len(generated_ideas) == args.num_ideas:
+                        break
+                main_logger.info(f"Generated {len(generated_ideas)} unique ideas for this run")
 
-            # Evaluate all generated ideas
-            main_logger.info("Evaluating ideas...")
-            scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
-            
-            # Find the best idea
-            best_idea = None
-            for scored_idea in scored_ideas:
-                if best_idea is None or scored_idea['score'] > best_idea['score']:
-                    best_idea = scored_idea
-                if best_idea['score'] > 80:
-                    break
+                # Evaluate all generated ideas
+                main_logger.info("Evaluating ideas...")
+                scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
+                
+                # Find the best idea
+                best_idea = None
+                for scored_idea in scored_ideas:
+                    if best_idea is None or scored_idea['score'] > best_idea['score']:
+                        best_idea = scored_idea
+                    if best_idea['score'] > 80:
+                        break
 
-            if best_idea:
-                main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
-            else:
-                main_logger.warning("No valid ideas were generated. Skipping this experiment run.")
-                continue
+                if best_idea:
+                    main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
+                else:
+                    main_logger.warning("No valid ideas were generated. Skipping this experiment run.")
+                    continue
 
-            # Log all generated ideas for this run
-            with open(f'logs/ideas_run_{experiment_run + 1}.log', 'w') as f:
-                for idea in current_run_ideas:
-                    f.write(f"{idea}\n")
+                # Log all generated ideas for this run
+                with open(f'logs/ideas_run_{experiment_run + 1}.log', 'w') as f:
+                    for idea in current_run_ideas:
+                        f.write(f"{idea}\n")
 
-            # Step 3: Experiment Design
-            main_logger.info("Designing experiment...")
-            experiment_designer = ExperimentDesigner(model_name)
-            experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
-            if not experiment_plan:
-                main_logger.error("Failed to design experiment. Skipping this experiment run.")
-                continue
+                # Step 3: Experiment Design
+                main_logger.info("Designing experiment...")
+                experiment_designer = ExperimentDesigner(model_name)
+                experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
+                if not experiment_plan:
+                    main_logger.error("Failed to design experiment. Skipping this experiment run.")
+                    continue
 
-            # Safety check for the experiment plan
-            if not safety_checker.check_experiment_plan(experiment_plan):
-                main_logger.warning("Experiment plan failed safety check. Skipping this experiment run.")
-                continue
+                # Validate experiment plan
+                if not isinstance(experiment_plan, list) or not all(isinstance(step, dict) and 'action' in step for step in experiment_plan):
+                    main_logger.error("Invalid experiment plan structure. Skipping this experiment run.")
+                    continue
 
-            main_logger.info("Experiment plan designed successfully.")
+                # Safety check for the experiment plan
+                if not safety_checker.check_experiment_plan(experiment_plan):
+                    main_logger.warning("Experiment plan failed safety check. Skipping this experiment run.")
+                    continue
 
-            # Step 4: Experiment Execution
-            main_logger.info("Executing experiment...")
-            experiment_executor = ExperimentExecutor(model_name)
-            results = experiment_executor.execute_experiment(experiment_plan)
-            if not results:
-                main_logger.error("Failed to execute experiment. Skipping this experiment run.")
-                continue
-            main_logger.info("Experiment executed successfully.")
+                main_logger.info("Experiment plan designed successfully.")
 
-            # Step 5: Feedback Loop
-            main_logger.info("Refining experiment plan...")
-            feedback_loop = FeedbackLoop(model_name)
-            refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
-            if not refined_plan:
-                main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
-                continue
-            main_logger.info("Experiment plan refined successfully.")
+                # Step 4: Experiment Execution
+                main_logger.info("Executing experiment...")
+                experiment_executor = ExperimentExecutor(model_name)
+                results = experiment_executor.execute_experiment(experiment_plan)
+                if not results:
+                    main_logger.error("Failed to execute experiment. Skipping this experiment run.")
+                    continue
+                main_logger.info("Experiment executed successfully.")
 
-            # Step 6: Refined Experiment Execution
-            main_logger.info("Executing refined experiment...")
-            final_results = experiment_executor.execute_experiment(refined_plan)
-            if not final_results:
-                main_logger.error("Failed to execute refined experiment. Skipping this experiment run.")
-                continue
-            main_logger.info("Refined experiment executed successfully.")
+                # Step 5: Feedback Loop
+                main_logger.info("Refining experiment plan...")
+                feedback_loop = FeedbackLoop(model_name)
+                refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
+                if not refined_plan:
+                    main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
+                    continue
+                main_logger.info("Experiment plan refined successfully.")
 
-            # Step 7: System Augmentation
-            main_logger.info("Augmenting system...")
-            system_augmentor = SystemAugmentor(model_name)
-            system_augmentor.augment_system(final_results)
-            main_logger.info("System augmentation completed.")
+                # Step 6: Refined Experiment Execution
+                main_logger.info("Executing refined experiment...")
+                final_results = experiment_executor.execute_experiment(refined_plan)
+                if not final_results:
+                    main_logger.error("Failed to execute refined experiment. Skipping this experiment run.")
+                    continue
+                main_logger.info("Refined experiment executed successfully.")
 
-            # Step 8: Benchmarking
-            main_logger.info("Running benchmarks...")
-            benchmarking = Benchmarking()
-            current_performance = benchmarking.run_benchmarks()
-            main_logger.info(f"Performance Metrics: {current_performance}")
+                # Step 7: System Augmentation
+                main_logger.info("Augmenting system...")
+                system_augmentor = SystemAugmentor(model_name)
+                system_augmentor.augment_system(final_results)
+                main_logger.info("System augmentation completed.")
 
-            # Compare current performance with previous performance
-            if previous_performance:
-                improvement = compare_performance(previous_performance, current_performance)
-                main_logger.info(f"Performance Improvement: {improvement}")
+                # Step 8: Benchmarking
+                main_logger.info("Running benchmarks...")
+                benchmarking = Benchmarking()
+                current_performance = benchmarking.run_benchmarks()
+                main_logger.info(f"Performance Metrics: {current_performance}")
 
-                # Revert changes if no improvement is detected
-                if not improvement:
-                    main_logger.warning("No performance improvement detected. Reverting changes.")
+                # Compare current performance with previous performance
+                if previous_performance:
+                    improvement = compare_performance(previous_performance, current_performance)
+                    main_logger.info(f"Performance Improvement: {improvement}")
+
+                    # Revert changes if no improvement is detected
+                    if not improvement:
+                        main_logger.warning("No performance improvement detected. Reverting changes.")
+                        if backup_path:
+                            restore_code(backup_path, '.')
+                            main_logger.info("Restored code from backup.")
+                        continue
+
+                previous_performance = current_performance
+
+                # Step 9: Report Writing
+                main_logger.info("Writing report...")
+                report_writer = ReportWriter()
+                report_writer.write_report(best_idea, refined_plan, final_results, current_performance)
+                main_logger.info("Report written successfully.")
+
+                # Step 10: Log Error Checking
+                main_logger.info("Checking logs for errors and warnings...")
+                log_error_checker = LogErrorChecker(model_name)
+                errors_warnings = log_error_checker.check_logs('logs/main.log')
+                main_logger.info(f"Log Analysis: {len(errors_warnings)} issues found")
+
+                # Step 11: Error Fixing
+                if errors_warnings:
+                    main_logger.info("Fixing errors...")
+                    error_fixer = ErrorFixer(model_name)
+                    error_fixer.fix_errors(errors_warnings)
+                    main_logger.info("Error fixing completed.")
+                else:
+                    main_logger.info("No errors or warnings found in logs.")
+
+                # Run tests after modifications
+                main_logger.info("Running all tests...")
+                test_result = os.system('python -m unittest discover tests')
+                if test_result != 0:
+                    main_logger.error("Tests failed. Reverting changes and terminating the experiment run.")
                     if backup_path:
                         restore_code(backup_path, '.')
                         main_logger.info("Restored code from backup.")
                     continue
+                else:
+                    main_logger.info("All tests passed successfully.")
 
-            previous_performance = current_performance
+                main_logger.info("Experiment run completed.")
 
-            # Step 9: Report Writing
-            main_logger.info("Writing report...")
-            report_writer = ReportWriter()
-            report_writer.write_report(best_idea, refined_plan, final_results, current_performance)
-            main_logger.info("Report written successfully.")
-
-            # Step 10: Log Error Checking
-            main_logger.info("Checking logs for errors and warnings...")
-            log_error_checker = LogErrorChecker(model_name)
-            errors_warnings = log_error_checker.check_logs('logs/main.log')
-            main_logger.info(f"Log Analysis: {len(errors_warnings)} issues found")
-
-            # Step 11: Error Fixing
-            if errors_warnings:
-                main_logger.info("Fixing errors...")
-                error_fixer = ErrorFixer(model_name)
-                error_fixer.fix_errors(errors_warnings)
-                main_logger.info("Error fixing completed.")
-            else:
-                main_logger.info("No errors or warnings found in logs.")
-
-            # Run tests after modifications
-            main_logger.info("Running all tests...")
-            test_result = os.system('python -m unittest discover tests')
-            if test_result != 0:
-                main_logger.error("Tests failed. Reverting changes and terminating the experiment run.")
-                if backup_path:
-                    restore_code(backup_path, '.')
-                    main_logger.info("Restored code from backup.")
+            except Exception as e:
+                main_logger.error(f"Error in experiment run {experiment_run + 1}: {str(e)}")
+                main_logger.error(traceback.format_exc())
                 continue
-            else:
-                main_logger.info("All tests passed successfully.")
-
-            main_logger.info("Experiment run completed.")
 
         main_logger.info("AI Research System execution completed.")
 

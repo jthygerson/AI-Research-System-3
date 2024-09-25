@@ -8,6 +8,7 @@ import json
 from utils.json_utils import parse_llm_response
 import textwrap
 from pprint import pformat
+import traceback  # Add this import at the top of the file
 
 class ExperimentDesigner:
     _instance = None
@@ -65,11 +66,21 @@ class ExperimentDesigner:
             self.logger.debug(f"Raw API response: {response}")
 
             parsed_response = parse_llm_response(response)
-            if parsed_response:
-                experiment_plan = parsed_response.get('experiment_plan', [])
+            if parsed_response and isinstance(parsed_response, dict) and 'experiment_plan' in parsed_response:
+                experiment_plan = parsed_response['experiment_plan']
             else:
-                self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
+                self.logger.warning("Failed to parse JSON response or invalid structure. Attempting to parse as text.")
                 experiment_plan = self.parse_text_response(response)
+
+            if not experiment_plan or not isinstance(experiment_plan, list):
+                self.logger.error("Failed to generate a valid experiment plan.")
+                return None
+
+            # Validate each step in the experiment plan
+            for step in experiment_plan:
+                if not isinstance(step, dict) or 'action' not in step:
+                    self.logger.error(f"Invalid step in experiment plan: {step}")
+                    return None
 
             # Check for required modules
             required_modules = ['rpa']  # Add other required modules here
@@ -81,20 +92,21 @@ class ExperimentDesigner:
 
             # Fix indentation in generated Python code
             for step in experiment_plan:
-                if step['action'] == 'run_python_code':
+                if step['action'] == 'run_python_code' and 'code' in step:
                     step['code'] = textwrap.dedent(step['code']).strip()
 
-            self.logger.info(f"Experiment plan:")
+            self.logger.info("Experiment plan:")
             self.pretty_print_experiment_plan(experiment_plan)
             return experiment_plan
         except Exception as e:
-            self.logger.error(f"Error designing experiment: {e}")
+            self.logger.error(f"Error designing experiment: {str(e)}")
             self.logger.error(traceback.format_exc())
-            return []
+            return None
 
     def parse_text_response(self, response):
         # Implement a method to parse non-JSON responses if needed
         # This is a placeholder and should be implemented based on the expected format of text responses
+        self.logger.warning("Text response parsing not implemented. Returning empty plan.")
         return []
 
     def pretty_print_experiment_plan(self, experiment_plan):

@@ -10,6 +10,7 @@ import json
 import traceback
 from utils.openai_utils import create_completion  # Make sure this import exists
 from utils.config import initialize_openai
+import requests.exceptions
 
 class ExperimentExecutor:
     _instance = None
@@ -31,18 +32,33 @@ class ExperimentExecutor:
 
     def execute_experiment(self, experiment_plan):
         self.logger.info("Executing experiment...")
-        try:
-            results = []
-            for step in experiment_plan:
-                step_result = self.execute_step(step)
-                results.append(step_result)
-                self.logger.info(f"Step result: {step_result}")
-            
-            self.logger.info(f"Experiment execution results: {results}")
-            return results
-        except Exception as e:
-            self.logger.error(f"Error executing experiment: {e}")
+        if not experiment_plan or not isinstance(experiment_plan, list):
+            self.logger.error("Invalid experiment plan. Aborting execution.")
             return []
+
+        results = []
+        for step_number, step in enumerate(experiment_plan, 1):
+            if not isinstance(step, dict) or 'action' not in step:
+                self.logger.error(f"Invalid step {step_number} in experiment plan. Skipping.")
+                continue
+
+            try:
+                step_result = self.execute_step(step)
+                results.append({"step": step_number, "action": step['action'], "result": step_result, "status": "success"})
+                self.logger.info(f"Step {step_number} completed successfully: {step['action']}")
+            except requests.exceptions.RequestException as e:
+                self.logger.error(f"Network error in step {step_number}: {e}")
+                results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "network_error"})
+            except ValueError as e:
+                self.logger.error(f"Value error in step {step_number}: {e}")
+                results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "value_error"})
+            except Exception as e:
+                self.logger.error(f"Unexpected error in step {step_number}: {e}")
+                self.logger.error(traceback.format_exc())
+                results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "unexpected_error"})
+
+        self.logger.info("Experiment execution completed.")
+        return results
 
     def execute_step(self, step):
         action = step.get('action')
