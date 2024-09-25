@@ -6,8 +6,7 @@ from utils.logger import setup_logger
 class ReportWriter:
     def __init__(self):
         self.logger = setup_logger('report_writer', 'logs/report_writer.log')
-        if not os.path.exists('reports'):
-            os.makedirs('reports')
+        os.makedirs('reports', exist_ok=True)
         print("ReportWriter initialized. Reports will be saved in the 'reports' directory.")
 
     def write_report(self, best_idea, experiment_plan, final_results, performance_metrics):

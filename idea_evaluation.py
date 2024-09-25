@@ -20,7 +20,7 @@ class IdeaEvaluator:
         
         # Set up loggers for general and debug information
         self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
-        self.debug_logger = getLogger('debug')
+        self.debug_logger = setup_logger('debug', 'logs/detailed_debug.log')
         
         # Initialize the OpenAI client
         self.initialize_openai()

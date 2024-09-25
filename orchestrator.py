@@ -27,13 +27,15 @@ from error_fixing import ErrorFixer
 from utils.safety_checker import SafetyChecker
 
 # Import utility functions
-from utils.logger import setup_logger
+from utils.logger import setup_logger, ensure_log_file
 from utils.code_backup import backup_code, restore_code
 from utils.config import initialize_openai
 
 # Set up a dedicated debug logger for detailed logging
 debug_logger = logging.getLogger('debug')
 debug_logger.setLevel(logging.DEBUG)
+
+ensure_log_file('logs/detailed_debug.log')
 debug_handler = logging.FileHandler('logs/detailed_debug.log')
 debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 debug_logger.addHandler(debug_handler)

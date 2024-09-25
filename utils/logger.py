@@ -4,12 +4,17 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
+def ensure_log_file(log_file):
+    """Ensure that the log file and its directory exist."""
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    if not os.path.exists(log_file):
+        open(log_file, 'a').close()
+
 def setup_logger(name, log_file, level=logging.DEBUG, console_level=logging.INFO):
     """To setup as many loggers as you want"""
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    ensure_log_file(log_file)
     
-    # Create logs directory if it doesn't exist
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     
     # File handler
     file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
