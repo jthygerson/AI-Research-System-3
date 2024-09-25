@@ -135,15 +135,14 @@ def main():
 
             # Evaluate all generated ideas
             main_logger.info("Evaluating ideas...")
-            for idea in generated_ideas:
-                scored_idea = idea_evaluator.evaluate_ideas([idea])[0]
-                current_run_ideas.append(scored_idea)
+            scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
+            for scored_idea in scored_ideas:
                 main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
                 
                 # Select the best idea (score > 80 or highest score)
                 if scored_idea['score'] > 80:
                     best_idea = scored_idea
-                    main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
+                    main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']}")
                     break
                 elif best_idea is None or scored_idea['score'] > best_idea['score']:
                     best_idea = scored_idea
@@ -157,7 +156,7 @@ def main():
                     main_logger.error("No ideas were generated. Skipping this experiment run.")
                     continue
 
-            main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']:.2f}")
+            main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
 
             # Log all generated ideas for this run
             with open(f'logs/ideas_run_{experiment_run + 1}.log', 'w') as f:
