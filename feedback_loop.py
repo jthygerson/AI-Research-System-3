@@ -61,6 +61,18 @@ class FeedbackLoop:
                 else:
                     self.logger.warning("Failed to parse JSON response. Skipping this iteration.")
 
+            # Before returning the refined plan
+            if isinstance(refined_plan, str):
+                try:
+                    refined_plan = json.loads(refined_plan)
+                except json.JSONDecodeError:
+                    self.logger.error("Failed to parse refined plan as JSON.")
+                    return None
+
+            if not isinstance(refined_plan, list) or not all(isinstance(step, dict) for step in refined_plan):
+                self.logger.error("Refined plan is not in the correct format.")
+                return None
+
             return refined_plan
         except Exception as e:
             self.logger.error(f"Error refining experiment: {str(e)}")

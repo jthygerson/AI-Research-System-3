@@ -197,6 +197,19 @@ def main():
                 if not refined_plan:
                     main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
                     continue
+
+                # After getting the refined_plan
+                if isinstance(refined_plan, str):
+                    try:
+                        refined_plan = json.loads(refined_plan)
+                    except json.JSONDecodeError:
+                        main_logger.error("Failed to parse refined plan as JSON. Skipping this experiment run.")
+                        continue
+
+                if not isinstance(refined_plan, list) or not all(isinstance(step, dict) for step in refined_plan):
+                    main_logger.error("Refined plan is not in the correct format. Skipping this experiment run.")
+                    continue
+
                 main_logger.info("Experiment plan refined successfully.")
 
                 # Step 6: Refined Experiment Execution

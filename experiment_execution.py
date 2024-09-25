@@ -21,8 +21,15 @@ class ExperimentExecutor:
 
     def execute_experiment(self, experiment_plan):
         self.logger.info("Executing experiment...")
+        if not isinstance(experiment_plan, list):
+            self.logger.error("Invalid experiment plan format. Expected a list of steps.")
+            return []
+        
         results = []
         for step_number, step in enumerate(experiment_plan, 1):
+            if not isinstance(step, dict):
+                self.logger.error(f"Invalid step format in step {step_number}. Expected a dictionary.")
+                continue
             try:
                 step_result = self.execute_step(step)
                 if 'error' in step_result:
