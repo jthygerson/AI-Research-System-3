@@ -12,7 +12,7 @@ from logging import getLogger
 # Remove redundant import
 # import openai
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 class IdeaGenerator:
     def __init__(self, model_name, num_ideas):
@@ -22,7 +22,7 @@ class IdeaGenerator:
         
         # Remove redundant logger initialization
         # self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.DEBUG)
-        self.debug_logger = getLogger('debug')
+        self.logger = logger
         
         # Initialize the OpenAI client
         self.initialize_openai()
@@ -37,7 +37,7 @@ class IdeaGenerator:
         Generates research ideas using the OpenAI API.
         This method is called by the orchestrator to create new ideas for each experiment run.
         """
-        self.debug_logger.info(f"Generating ideas with model: {self.model_name}, num_ideas: {self.num_ideas}")
+        self.logger.info(f"Generating ideas with model: {self.model_name}, num_ideas: {self.num_ideas}")
         try:
             # Construct the prompt for idea generation
             prompt = {
@@ -60,7 +60,7 @@ class IdeaGenerator:
             }
 
             # Log the prompt for debugging purposes
-            self.debug_logger.info(f"\nPrompt sent to API:\n{prompt}")
+            self.logger.info(f"\nPrompt sent to API:\n{prompt}")
 
             # Send the prompt to the OpenAI API
             response = create_completion(
@@ -74,7 +74,7 @@ class IdeaGenerator:
             )
             
             # Log the raw API response for debugging
-            self.debug_logger.info(f"\nRaw API response:\n{response}")
+            self.logger.info(f"\nRaw API response:\n{response}")
             
             # Parse the JSON response
             parsed_response = parse_llm_response(response)
@@ -89,7 +89,7 @@ class IdeaGenerator:
                 ideas = self.parse_text_response(response)
 
             # Log the generated ideas for debugging
-            self.debug_logger.debug(f"Generated ideas: {ideas}")
+            self.logger.debug(f"Generated ideas: {ideas}")
             if not ideas:
                 self.logger.warning("No ideas were generated")
             return ideas
