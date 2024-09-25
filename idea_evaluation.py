@@ -14,6 +14,8 @@ import openai
 from logging import getLogger
 
 class IdeaEvaluator:
+    openai_initialized = False
+
     def __init__(self, model_name):
         # Initialize the IdeaEvaluator with the specified model
         self.model_name = model_name
@@ -25,12 +27,13 @@ class IdeaEvaluator:
         # Initialize the OpenAI client
         self.initialize_openai()
 
-    def initialize_openai(self):
+    @classmethod
+    def initialize_openai(cls):
         # Initialize the OpenAI client if it hasn't been done already
-        if not hasattr(self, 'openai_initialized'):
-            self.logger.info("Initializing OpenAI client for IdeaEvaluator")
+        if not cls.openai_initialized:
+            cls.logger.info("Initializing OpenAI client for IdeaEvaluator")
             initialize_openai()  # This function is imported from utils.config
-            self.openai_initialized = True
+            cls.openai_initialized = True
 
     def evaluate_ideas(self, ideas):
         """
