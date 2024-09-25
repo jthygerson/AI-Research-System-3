@@ -70,10 +70,10 @@ class IdeaEvaluator:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI research evaluator."},
+                    {"role": "system", "content": "You are an AI research assistant specializing in evaluating research ideas."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=1000,
+                max_tokens=3000,
                 temperature=0.7
             )
             

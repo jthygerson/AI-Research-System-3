@@ -89,7 +89,7 @@ class ExperimentDesigner:
                     {"role": "system", "content": "You are a world-class computer scientist specializing in AI model and system improvement. Always respond with valid JSON exactly as specified in the instructions."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=2000,
+                max_tokens=10000,
                 temperature=0.7,
             )
             

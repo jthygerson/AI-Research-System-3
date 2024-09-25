@@ -8,6 +8,7 @@ from utils.config import initialize_openai
 import logging
 from utils.json_utils import parse_llm_response
 from logging import getLogger
+import traceback
 
 # Remove redundant import
 # import openai
@@ -66,10 +67,10 @@ class IdeaGenerator:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI research assistant."},
+                    {"role": "system", "content": "You are an AI research assistant specializing in generating innovative ideas for AI system improvement."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=150 * self.num_ideas,
+                max_tokens=10000,
                 temperature=0.7
             )
             

@@ -8,6 +8,7 @@ from utils.logger import setup_logger
 from utils.resource_manager import ResourceManager
 import json
 import traceback
+import re
 from utils.openai_utils import create_completion  # Make sure this import exists
 from utils.config import initialize_openai
 import requests.exceptions
@@ -68,7 +69,7 @@ class ExperimentExecutor:
                 {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
                 {"role": "user", "content": json.dumps(prompt)}
             ],
-            max_tokens=500,
+            max_tokens=10000,
             temperature=0.7,
         )
         
@@ -87,29 +88,51 @@ class ExperimentExecutor:
         return {'stdout': result.stdout, 'stderr': result.stderr}
 
     def use_llm_api(self, prompt):
-        # Use the OpenAI API or any other LLM API
         response = create_completion(
             self.model_name,
             messages=[
                 {"role": "system", "content": "You are an AI assistant helping with experiments."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=100
+            max_tokens=10000  # Increased to allow for longer responses
         )
         
-        # Clean and parse the response if it's in JSON format
-        cleaned_response = response.strip()
-        if cleaned_response.startswith("```json"):
-            cleaned_response = cleaned_response[7:]  # Remove ```json
-        if cleaned_response.endswith("```"):
-            cleaned_response = cleaned_response[:-3]  # Remove closing ```
+        # Clean and parse the response
+        cleaned_response = self.clean_llm_response(response)
         
         try:
             # Attempt to parse as JSON
-            return json.loads(cleaned_response)
+            parsed_response = json.loads(cleaned_response)
+            return self.process_parsed_response(parsed_response)
         except json.JSONDecodeError:
-            # If it's not valid JSON, return the original response
-            return response
+            # If it's not valid JSON, return the original cleaned response
+            return {"raw_response": cleaned_response}
+
+    def clean_llm_response(self, response):
+        # Remove any markdown code block syntax
+        cleaned = re.sub(r'```(?:json)?\s*|\s*```', '', response.strip())
+        # Remove any leading/trailing whitespace
+        return cleaned.strip()
+
+    def process_parsed_response(self, parsed_response):
+        if isinstance(parsed_response, dict):
+            # If there's a 'code' key, ensure it's properly formatted
+            if 'code' in parsed_response:
+                parsed_response['code'] = self.format_code(parsed_response['code'])
+            return parsed_response
+        else:
+            # If it's not a dict, wrap it in a dict
+            return {"parsed_response": parsed_response}
+
+    def format_code(self, code):
+        # Remove any extra indentation
+        lines = code.split('\n')
+        if lines:
+            # Find minimum indentation
+            min_indent = min(len(line) - len(line.lstrip()) for line in lines if line.strip())
+            # Remove that amount of indentation from each line
+            return '\n'.join(line[min_indent:] if line.strip() else '' for line in lines)
+        return code
 
     def make_web_request(self, url, method='GET'):
         # Implement rate limiting and respect robots.txt

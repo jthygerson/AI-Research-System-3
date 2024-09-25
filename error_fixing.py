@@ -1,6 +1,7 @@
 # error_fixing.py
 
 import os
+import json  # Added import for json module
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -32,7 +33,7 @@ class ErrorFixer:
                     {"role": "system", "content": "You are a code fixer and system optimizer."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=1000,
+                max_tokens=10000,
                 temperature=0.7,
             )
             
@@ -42,7 +43,7 @@ class ErrorFixer:
             if parsed_response:
                 self.logger.info(f"Suggested code fixes: {parsed_response}")
                 # Apply the code fixes
-                self.apply_code_fixes(json.dumps(parsed_response))
+                self.apply_code_fixes(parsed_response)  # Removed json.dumps() as parsed_response is already a Python object
             else:
                 self.logger.warning("Failed to parse the API response.")
         except Exception as e:
