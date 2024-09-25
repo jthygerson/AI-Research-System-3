@@ -69,7 +69,7 @@ class ExperimentExecutor:
                 {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
                 {"role": "user", "content": json.dumps(prompt)}
             ],
-            max_tokens=10000,
+            max_tokens=3500,
             temperature=0.7,
         )
         

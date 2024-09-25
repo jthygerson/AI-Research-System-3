@@ -70,7 +70,7 @@ class IdeaGenerator:
                     {"role": "system", "content": "You are an AI research assistant specializing in generating innovative ideas for AI system improvement."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=10000,
+                max_tokens=3000,
                 temperature=0.7
             )
             

@@ -32,14 +32,14 @@ class LogErrorChecker:
                         {"role": "system", "content": "You are a system log analyzer."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=1000,
+                    max_tokens=35000,
                     temperature=0.5,
                 )
             else:
                 response = create_completion(
                     self.model_name,
                     prompt=prompt,
-                    max_tokens=1000,
+                    max_tokens=3500,
                     temperature=0.5,
                 )
             

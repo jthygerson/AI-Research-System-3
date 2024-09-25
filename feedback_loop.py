@@ -45,7 +45,7 @@ class FeedbackLoop:
                         {"role": "system", "content": "You are an AI research assistant specializing in experiment refinement."},
                         {"role": "user", "content": json.dumps(prompt)}
                     ],
-                    max_tokens=1000,
+                    max_tokens=3500,
                     temperature=0.7,
                 )
                 

@@ -24,4 +24,4 @@ def initialize_openai():
 
 # Add more configuration options as needed
 MODEL_TEMPERATURE = float(os.getenv('MODEL_TEMPERATURE', 0.7))
-MAX_TOKENS = int(os.getenv('MAX_TOKENS', 1000))
+MAX_TOKENS = int(os.getenv('MAX_TOKENS', 3500))
