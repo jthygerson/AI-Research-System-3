@@ -136,27 +136,20 @@ def main():
             # Evaluate all generated ideas
             main_logger.info("Evaluating ideas...")
             scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
+            
+            # Find the best idea
+            best_idea = None
             for scored_idea in scored_ideas:
-                main_logger.info(f"Evaluated idea with score: {scored_idea['score']}")
-                
-                # Select the best idea (score > 80 or highest score)
-                if scored_idea['score'] > 80:
+                if best_idea is None or scored_idea['score'] > best_idea['score']:
                     best_idea = scored_idea
-                    main_logger.info(f"Found idea with score above 80: {best_idea['idea'][:50]}... with score {best_idea['score']}")
+                if best_idea['score'] > 80:
                     break
-                elif best_idea is None or scored_idea['score'] > best_idea['score']:
-                    best_idea = scored_idea
 
-            # Handle case where no valid ideas were generated
-            if best_idea is None:
-                main_logger.warning("Failed to generate any valid ideas with score above 80. Selecting the best idea from generated ideas.")
-                if current_run_ideas:
-                    best_idea = max(current_run_ideas, key=lambda x: x['score'])
-                else:
-                    main_logger.error("No ideas were generated. Skipping this experiment run.")
-                    continue
-
-            main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
+            if best_idea:
+                main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
+            else:
+                main_logger.warning("No valid ideas were generated. Skipping this experiment run.")
+                continue
 
             # Log all generated ideas for this run
             with open(f'logs/ideas_run_{experiment_run + 1}.log', 'w') as f:
