@@ -138,39 +138,61 @@ class ExperimentDesigner:
         fixed_plan = []
         for step in plan:
             if step['action'] == 'web_request':
-                step = self.fix_web_request_step(step)
+                step = self.fix_web_request_step(step, max_retries=3)
             elif step['action'] == 'use_gpu':
                 step = self.add_gpu_check(step)
             fixed_plan.append(step)
         return fixed_plan
 
-    def fix_web_request_step(self, step):
-        if 'example.com' in step.get('url', ''):
-            prompt = {
-                "task": "fix_web_request",
-                "step": step,
-                "instructions": "Replace the example.com URL with a real, accessible URL that serves a similar purpose for the experiment. Respond with a JSON object containing the fixed step."
-            }
-            response = create_completion(
-                self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps. Always respond with valid JSON."},
-                    {"role": "user", "content": json.dumps(prompt)}
-                ],
-                max_tokens=200,
-                temperature=0.7,
-            )
+    def fix_web_request_step(self, step, max_retries=3):
+        if 'example.com' not in step.get('url', ''):
+            return step
+
+        for attempt in range(max_retries):
             try:
-                self.logger.debug(f"LLM response for web request fix: {response}")
-                fixed_step = json.loads(response)
-                if isinstance(fixed_step, dict) and 'url' in fixed_step:
+                prompt = {
+                    "task": "fix_web_request",
+                    "step": step,
+                    "instructions": (
+                        "Replace the example.com URL with a real, accessible URL that serves a similar purpose for the experiment. "
+                        "Respond with a JSON object containing ONLY the fixed step, with no additional formatting or explanation. "
+                        "The JSON should have 'action', 'url', and optionally 'method' keys."
+                    )
+                }
+                if attempt > 0:
+                    prompt["instructions"] += (
+                        " Your previous response was invalid. Please ensure you return ONLY a JSON object "
+                        "with the structure: {'action': 'web_request', 'url': 'https://real-url.com', 'method': 'GET'}"
+                    )
+
+                response = create_completion(
+                    self.model_name,
+                    messages=[
+                        {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps. Always respond with valid JSON containing only the fixed step."},
+                        {"role": "user", "content": json.dumps(prompt)}
+                    ],
+                    max_tokens=200,
+                    temperature=0.7,
+                )
+                self.logger.debug(f"LLM response for web request fix (attempt {attempt + 1}): {response}")
+                
+                # Remove any potential markdown formatting
+                cleaned_response = re.sub(r'^```json\n|\n```$', '', response.strip())
+                
+                fixed_step = json.loads(cleaned_response)
+                
+                if isinstance(fixed_step, dict) and 'url' in fixed_step and fixed_step.get('action') == 'web_request':
                     return fixed_step
                 else:
-                    self.logger.error(f"Invalid structure in LLM response: {fixed_step}")
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to parse LLM response for web request fix: {e}")
-                self.logger.error(f"Raw response: {response}")
-        return step
+                    raise ValueError("Invalid structure in LLM response")
+
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.warning(f"Error in fix_web_request_step (attempt {attempt + 1}): {str(e)}")
+                if attempt == max_retries - 1:
+                    self.logger.error(f"Failed to fix web request step after {max_retries} attempts. Returning original step.")
+                    return step
+
+        return step  # This line should never be reached due to the return in the for loop, but it's here for completeness
 
     def add_gpu_check(self, step):
         step['code'] = f"""
