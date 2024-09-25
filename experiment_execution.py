@@ -13,65 +13,72 @@ from utils.config import initialize_openai
 import requests.exceptions
 
 class ExperimentExecutor:
-    _instance = None
-
-    def __new__(cls, model_name):
-        if cls._instance is None:
-            cls._instance = super(ExperimentExecutor, cls).__new__(cls)
-            cls._instance.model_name = model_name
-            cls._instance.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
-            cls._instance.resource_manager = ResourceManager()
-            cls._instance.initialize_openai()
-        return cls._instance
-
-    def initialize_openai(self):
-        if not hasattr(self, 'openai_initialized'):
-            self.logger.info("Initializing OpenAI client for ExperimentExecutor")
-            self.openai_client = initialize_openai()
-            self.openai_initialized = True
+    def __init__(self, model_name, resource_manager):
+        self.model_name = model_name
+        self.resource_manager = resource_manager
+        self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
 
     def execute_experiment(self, experiment_plan):
         self.logger.info("Executing experiment...")
-        if not experiment_plan or not isinstance(experiment_plan, list):
-            self.logger.error("Invalid experiment plan. Aborting execution.")
-            return []
-
         results = []
         for step_number, step in enumerate(experiment_plan, 1):
-            if not isinstance(step, dict) or 'action' not in step:
-                self.logger.error(f"Invalid step {step_number} in experiment plan. Skipping.")
-                continue
-
             try:
                 step_result = self.execute_step(step)
-                results.append({"step": step_number, "action": step['action'], "result": step_result, "status": "success"})
-                self.logger.info(f"Step {step_number} completed successfully: {step['action']}")
-            except requests.exceptions.RequestException as e:
-                self.logger.error(f"Network error in step {step_number}: {e}")
-                results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "network_error"})
-            except ValueError as e:
-                self.logger.error(f"Value error in step {step_number}: {e}")
-                results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "value_error"})
+                if 'error' in step_result:
+                    fixed_step = self.attempt_fix_step(step, step_result['error'])
+                    if fixed_step:
+                        step_result = self.execute_step(fixed_step)
+                    else:
+                        self.logger.warning(f"Unable to fix step {step_number}. Continuing with next step.")
+                results.append({"step": step_number, "action": step['action'], "result": step_result, "status": "success" if 'error' not in step_result else "error"})
             except Exception as e:
                 self.logger.error(f"Unexpected error in step {step_number}: {e}")
-                self.logger.error(traceback.format_exc())
                 results.append({"step": step_number, "action": step['action'], "error": str(e), "status": "unexpected_error"})
-
-        self.logger.info("Experiment execution completed.")
         return results
 
     def execute_step(self, step):
         action = step.get('action')
-        if action == 'run_python_code':
-            return self.run_python_code(step.get('code'))
-        elif action == 'use_llm_api':
-            return self.use_llm_api(step.get('prompt'))
-        elif action == 'web_request':
-            return self.make_web_request(step.get('url'), step.get('method', 'GET'))
-        elif action == 'use_gpu':
-            return self.use_gpu(step.get('task'))
-        else:
-            raise ValueError(f"Unknown action: {action}")
+        try:
+            if action == 'run_python_code':
+                return self.run_python_code(step.get('code'))
+            elif action == 'use_llm_api':
+                return self.use_llm_api(step.get('prompt'))
+            elif action == 'web_request':
+                return self.make_web_request(step.get('url'), step.get('method', 'GET'))
+            elif action == 'use_gpu':
+                return self.use_gpu(step.get('task'))
+            else:
+                raise ValueError(f"Unknown action: {action}")
+        except Exception as e:
+            self.logger.error(f"Error executing step with action '{action}': {str(e)}")
+            return {"error": str(e)}
+
+    def attempt_fix_step(self, step, error):
+        self.logger.info(f"Attempting to fix step: {step['action']}")
+        prompt = {
+            "task": "fix_experiment_step",
+            "step": step,
+            "error": error,
+            "instructions": "Analyze the given step and the error it produced. Propose a fix for the step that addresses the error. Return the fixed step as a JSON object with the same structure as the original step."
+        }
+        
+        response = create_completion(
+            self.model_name,
+            messages=[
+                {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
+                {"role": "user", "content": json.dumps(prompt)}
+            ],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        
+        try:
+            fixed_step = json.loads(response)
+            self.logger.info(f"Step fixed: {fixed_step}")
+            return fixed_step
+        except json.JSONDecodeError:
+            self.logger.error("Failed to parse LLM response for step fix")
+            return None
 
     def run_python_code(self, code):
         # CAUTION: Running arbitrary code can be dangerous

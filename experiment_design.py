@@ -76,7 +76,9 @@ class ExperimentDesigner:
                     "  \"expected_outcomes\": [\"20% increase in idea quality scores\", \"30% reduction in experiment execution time\"],\n"
                     "  \"evaluation_criteria\": [\"Compare idea quality scores before and after implementation\", \"Measure average experiment execution time\"]\n"
                     "}\n\n"
-                    "Ensure your response is a single, valid JSON object following this structure."
+                    "Ensure your response is a single, valid JSON object following this structure. "
+                    "Ensure that all steps are executable and do not rely on non-existent resources or APIs. "
+                    "For web requests, use real, accessible URLs. For GPU tasks, include a check for GPU availability."
                 ),
                 "output_format": "JSON"
             }
@@ -96,9 +98,10 @@ class ExperimentDesigner:
             parsed_response = parse_llm_response(response)
             if parsed_response and isinstance(parsed_response, dict) and 'experiment_plan' in parsed_response:
                 experiment_plan = parsed_response['experiment_plan']
+                experiment_plan = self.validate_and_fix_plan(experiment_plan)
             else:
-                self.logger.warning("Failed to parse JSON response or invalid structure. Attempting to parse as text.")
-                experiment_plan = self.parse_text_response(response)
+                self.logger.warning("Failed to parse JSON response or invalid structure.")
+                return None
 
             if not experiment_plan or not isinstance(experiment_plan, list):
                 self.logger.error("Failed to generate a valid experiment plan.")
@@ -130,6 +133,49 @@ class ExperimentDesigner:
             self.logger.error(f"Error designing experiment: {str(e)}")
             self.logger.error(traceback.format_exc())
             return None
+
+    def validate_and_fix_plan(self, plan):
+        fixed_plan = []
+        for step in plan:
+            if step['action'] == 'web_request':
+                step = self.fix_web_request_step(step)
+            elif step['action'] == 'use_gpu':
+                step = self.add_gpu_check(step)
+            fixed_plan.append(step)
+        return fixed_plan
+
+    def fix_web_request_step(self, step):
+        if 'example.com' in step.get('url', ''):
+            prompt = {
+                "task": "fix_web_request",
+                "step": step,
+                "instructions": "Replace the example.com URL with a real, accessible URL that serves a similar purpose for the experiment."
+            }
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=200,
+                temperature=0.7,
+            )
+            try:
+                fixed_step = json.loads(response)
+                return fixed_step
+            except json.JSONDecodeError:
+                self.logger.error("Failed to parse LLM response for web request fix")
+        return step
+
+    def add_gpu_check(self, step):
+        step['code'] = f"""
+if not torch.cuda.is_available():
+    print("GPU not available. Skipping GPU task.")
+else:
+    # Original GPU task
+    {step.get('code', '# No code provided')}
+"""
+        return step
 
     def parse_text_response(self, response):
         """
