@@ -9,6 +9,7 @@ from utils.resource_manager import ResourceManager
 import json
 import traceback
 from utils.openai_utils import create_completion  # Make sure this import exists
+from utils.config import initialize_openai
 
 class ExperimentExecutor:
     _instance = None
@@ -25,7 +26,7 @@ class ExperimentExecutor:
     def initialize_openai(self):
         if not hasattr(self, 'openai_initialized'):
             self.logger.info("Initializing OpenAI client for ExperimentExecutor")
-            initialize_openai()
+            self.openai_client = initialize_openai()
             self.openai_initialized = True
 
     def execute_experiment(self, experiment_plan):

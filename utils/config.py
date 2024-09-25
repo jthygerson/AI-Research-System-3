@@ -18,8 +18,9 @@ def initialize_openai():
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
-    OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key)
     logger.info("OpenAI client initialized successfully")
+    return client
 
 # Add more configuration options as needed
 MODEL_TEMPERATURE = float(os.getenv('MODEL_TEMPERATURE', 0.7))
