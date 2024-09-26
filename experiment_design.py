@@ -10,6 +10,7 @@ import textwrap
 from pprint import pformat
 import traceback  # Add this import at the top of the file
 import re  # Add this import at the top of the file
+import logging
 
 class ExperimentDesigner:
     _instance = None
@@ -18,7 +19,7 @@ class ExperimentDesigner:
         if cls._instance is None:
             cls._instance = super(ExperimentDesigner, cls).__new__(cls)
             cls._instance.model_name = model_name
-            cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log')
+            cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log', console_level=logging.INFO)
             cls._instance.initialize_openai()
         return cls._instance
 

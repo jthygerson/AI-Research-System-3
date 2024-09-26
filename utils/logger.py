@@ -2,7 +2,6 @@
 
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 
 def ensure_log_file(log_file):
     """Ensure that the log file and its directory exist."""
@@ -12,24 +11,32 @@ def ensure_log_file(log_file):
 
 def setup_logger(name, log_file, level=logging.DEBUG, console_level=logging.INFO):
     """To setup as many loggers as you want"""
-    ensure_log_file(log_file)
-    
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    
-    # File handler
-    file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(console_level)
-
-    # Logger
     logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(file_handler)
+    logger.setLevel(logging.DEBUG)  # Capture all levels of logs
+
+    # Console Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(console_level)
+    console_formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+
+    # File Handler (for INFO and above)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(file_formatter)
+
+    # Detailed File Handler (for DEBUG and above)
+    detailed_log_file = log_file.replace('.log', '_detailed.log')
+    ensure_log_file(detailed_log_file)
+    detailed_file_handler = logging.FileHandler(detailed_log_file)
+    detailed_file_handler.setLevel(logging.DEBUG)
+    detailed_file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    detailed_file_handler.setFormatter(detailed_file_formatter)
+
+    # Add handlers to the logger
     logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+    logger.addHandler(detailed_file_handler)
 
     return logger

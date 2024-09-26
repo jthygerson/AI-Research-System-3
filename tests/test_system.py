@@ -25,7 +25,9 @@ class TestAIResearchSystem(unittest.TestCase):
             'experiment_execution',
             'feedback_loop',
             'log_error_checker',
-            'error_fixing'
+            'error_fixing',
+            'main',
+            'debug'
         ]
         for logger_name in loggers:
             logger = logging.getLogger(logger_name)
@@ -33,6 +35,13 @@ class TestAIResearchSystem(unittest.TestCase):
             for handler in handlers:
                 handler.close()
                 logger.removeHandler(handler)
+        
+        # Remove both regular and detailed log files
+        log_file = f'logs/{logger_name}.log'
+        detailed_log_file = f'logs/{logger_name}_detailed.log'
+        for file in [log_file, detailed_log_file]:
+            if os.path.exists(file):
+                os.remove(file)
 
     @patch('idea_generation.create_completion')
     def test_generate_ideas_chat_model(self, mock_create):

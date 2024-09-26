@@ -10,22 +10,10 @@ import traceback
 import logging
 
 class FeedbackLoop:
-    _instance = None
-
-    def __new__(cls, model_name, max_iterations=3):
-        if cls._instance is None:
-            cls._instance = super(FeedbackLoop, cls).__new__(cls)
-            cls._instance.model_name = model_name
-            cls._instance.max_iterations = max_iterations
-            cls._instance.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log')
-            cls._instance.initialize_openai()
-        return cls._instance
-
-    def initialize_openai(self):
-        if not hasattr(self, 'openai_initialized'):
-            self.logger.info("Initializing OpenAI client for FeedbackLoop")
-            initialize_openai()
-            self.openai_initialized = True
+    def __init__(self, model_name):
+        self.model_name = model_name
+        self.max_iterations = 5  # Example value
+        self.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log', console_level=logging.INFO)
 
     def refine_experiment(self, experiment_plan, initial_results):
         self.logger.info("Refining experiment plan based on initial results...")
@@ -95,7 +83,7 @@ class FeedbackLoop:
                     temperature=0.7,
                 )
                 
-                self.logger.info(f"Raw API response (Iteration {iteration+1}): {response}")
+                self.logger.debug(f"Raw API response (Iteration {iteration+1}): {response}")
 
                 parsed_response = parse_llm_response(response)
                 if parsed_response:

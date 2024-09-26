@@ -7,12 +7,12 @@ from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response
 import traceback
+import logging
 
 class ErrorFixer:
     def __init__(self, model_name):
-        initialize_openai()  # Initialize OpenAI API key
         self.model_name = model_name
-        self.logger = setup_logger('error_fixing', 'logs/error_fixing.log')
+        self.logger = setup_logger('error_fixing', 'logs/error_fixing.log', console_level=logging.INFO)
 
     def fix_errors(self, errors_warnings):
         """

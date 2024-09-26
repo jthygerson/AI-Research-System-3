@@ -32,14 +32,9 @@ from utils.code_backup import backup_code, restore_code
 from utils.config import initialize_openai
 from utils.resource_manager import ResourceManager  # Add this import
 
-# Set up a dedicated debug logger for detailed logging
-debug_logger = logging.getLogger('debug')
-debug_logger.setLevel(logging.DEBUG)
-
-ensure_log_file('logs/detailed_debug.log')
-debug_handler = logging.FileHandler('logs/detailed_debug.log')
-debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-debug_logger.addHandler(debug_handler)
+# Set up loggers
+main_logger = setup_logger('main', 'logs/main.log', console_level=logging.INFO)
+debug_logger = setup_logger('debug', 'logs/debug.log', level=logging.DEBUG, console_level=logging.DEBUG)
 
 # Initialize a list to store API call history for debugging purposes
 api_call_history = []
@@ -92,8 +87,6 @@ def main():
         print(f"Error: Unsupported model_name '{model_name}'. Please choose a supported model.")
         sys.exit(1)
 
-    # Setup main logger for overall system logging
-    main_logger = setup_logger('main_logger', 'logs/main.log', level=logging.DEBUG, console_level=logging.INFO)
     main_logger.info(f"Starting AI Research System with model: {model_name}, {args.num_ideas} ideas, {args.num_experiments} experiments.")
 
     # Backup code before starting to allow for reverting changes if needed

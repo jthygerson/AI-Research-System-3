@@ -1,15 +1,15 @@
 # log_error_checker.py
 
 import os
+import logging
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 
 class LogErrorChecker:
     def __init__(self, model_name):
-        initialize_openai()  # Initialize OpenAI API key
         self.model_name = model_name
-        self.logger = setup_logger('log_error_checker', 'logs/log_error_checker.log')
+        self.logger = setup_logger('log_error_checker', 'logs/log_error_checker.log', console_level=logging.INFO)
 
     def check_logs(self, log_file_path):
         self.logger.info(f"Checking logs for errors and warnings in {log_file_path}")
