@@ -230,8 +230,14 @@ class SystemAugmentor:
             
             self.logger.info(f"Code modifications suggested: {response}")
 
-            if self._validate_modifications(response):
-                self._apply_code_modifications(response)
+            # Parse the response
+            parsed_response = parse_llm_response(response)
+            if not parsed_response:
+                self.logger.warning("Failed to parse model response")
+                return
+
+            if self._validate_modifications(parsed_response):
+                self._apply_code_modifications(parsed_response)
                 if self._run_tests():
                     performance_improvement = self._evaluate_performance_improvement()
                     if performance_improvement:
@@ -250,7 +256,36 @@ class SystemAugmentor:
         return {
             "task": "generate_augmentation_prompt",
             "experiment_results": experiment_results,
-            "instructions": "Based on the given experiment results, identify specific improvements that can be made to the AI Research System's code to enhance its performance in the following areas: 1. Quality of ideas generated, 2. Effectiveness of idea evaluation, 3. Quality of experiment designs, 4. Efficiency and accuracy of experiment executions, 5. Application of research findings, 6. System reliability and performance improvement after adjustments, 7. Benchmark performance on difficult coding tasks, 8. Quality and comprehensiveness of reports, 9. Accuracy of log file error-checking, 10. Effectiveness of applied code changes in fixing previous errors. Provide the exact code modifications needed, including the file names and line numbers. Ensure that your suggestions are safe, maintainable, and improve the system's overall performance.",
+            "instructions": """
+Based on the given experiment results, identify specific improvements that can be made to the AI Research System's code to enhance its performance in the following areas:
+1. Quality of ideas generated
+2. Effectiveness of idea evaluation
+3. Quality of experiment designs
+4. Efficiency and accuracy of experiment executions
+5. Application of research findings
+6. System reliability and performance improvement after adjustments
+7. Benchmark performance on difficult coding tasks
+8. Quality and comprehensiveness of reports
+9. Accuracy of log file error-checking
+10. Effectiveness of applied code changes in fixing previous errors
+
+Provide the exact code modifications needed, including the file names and line numbers. Ensure that your suggestions are safe, maintainable, and improve the system's overall performance.
+
+Format your response as a JSON array of objects, where each object represents a single file modification:
+
+[
+  {
+    "file": "path/to/file.py",
+    "code": "The entire content of the modified file"
+  },
+  {
+    "file": "path/to/another_file.py",
+    "code": "The entire content of the modified file"
+  }
+]
+
+If no modifications are needed, return an empty array: []
+            """,
             "output_format": "JSON"
         }
 
@@ -263,7 +298,7 @@ class SystemAugmentor:
         response = create_completion(
             self.model_name,
             messages=[
-                {"role": "system", "content": "You are an AI research assistant."},
+                {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
                 {"role": "user", "content": json.dumps(prompt)}
             ],
             max_tokens=1000,
@@ -275,22 +310,18 @@ class SystemAugmentor:
     def _validate_modifications(self, modifications):
         self.logger.info("Validating proposed modifications...")
         
-        # Skip the check for potentially dangerous operations
-        # dangerous_keywords = ['os.system', 'subprocess.run', 'exec', 'eval']
-        # for keyword in dangerous_keywords:
-        #     if keyword in modifications:
-        #         self.logger.warning(f"Potentially dangerous operation found: {keyword}")
-        #         return False
+        parsed_modifications = self._parse_modifications(modifications)
         
-        # Validate syntax of proposed changes
-        for file_path, changes in self._parse_modifications(modifications):
+        if not parsed_modifications:
+            self.logger.warning("No valid modifications found to validate.")
+            return False
+        
+        for file_path, changes in parsed_modifications:
             try:
                 ast.parse(changes)
             except SyntaxError as e:
                 self.logger.error(f"Syntax error in proposed changes for {file_path}: {e}")
                 return False
-        
-        # Add more validation checks as needed
         
         return True
 
@@ -304,13 +335,33 @@ class SystemAugmentor:
             self._revert_changes()
 
     def _parse_modifications(self, code_modifications):
-        # Implement parsing logic to extract file paths and changes
         parsed_modifications = []
-        for modification in code_modifications:
-            file_path = modification.get('file')
-            changes = modification.get('code')
-            if file_path and changes:
-                parsed_modifications.append((file_path, changes))
+        
+        # If code_modifications is a string, try to parse it as JSON
+        if isinstance(code_modifications, str):
+            try:
+                code_modifications = json.loads(code_modifications)
+            except json.JSONDecodeError:
+                self.logger.error("Failed to parse code_modifications as JSON")
+                return parsed_modifications
+        
+        # If it's a dictionary, wrap it in a list
+        if isinstance(code_modifications, dict):
+            code_modifications = [code_modifications]
+        
+        # If it's a list, process each item
+        if isinstance(code_modifications, list):
+            for modification in code_modifications:
+                if isinstance(modification, dict):
+                    file_path = modification.get('file')
+                    changes = modification.get('code')
+                    if file_path and changes:
+                        parsed_modifications.append((file_path, changes))
+                else:
+                    self.logger.warning(f"Skipping invalid modification: {modification}")
+        else:
+            self.logger.error(f"Unexpected type for code_modifications: {type(code_modifications)}")
+        
         return parsed_modifications
 
     def _modify_file(self, file_path, changes):
