@@ -40,7 +40,7 @@ class IdeaEvaluator:
             scored_idea = self.evaluate_single_idea(idea)
             if scored_idea:
                 scored_ideas.append(scored_idea)
-                self.logger.info(f"Evaluated idea with score: {scored_idea['score']}")
+                self.logger.info(f"Evaluated idea: {scored_idea['idea']} with score: {scored_idea['score']}")
 
         return scored_ideas
 

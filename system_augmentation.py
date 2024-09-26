@@ -305,8 +305,13 @@ class SystemAugmentor:
 
     def _parse_modifications(self, code_modifications):
         # Implement parsing logic to extract file paths and changes
-        # This is a placeholder and should be implemented based on the expected format
-        return [("path/to/file.py", "changes")]
+        parsed_modifications = []
+        for modification in code_modifications:
+            file_path = modification.get('file')
+            changes = modification.get('code')
+            if file_path and changes:
+                parsed_modifications.append((file_path, changes))
+        return parsed_modifications
 
     def _modify_file(self, file_path, changes):
         with open(file_path, 'r') as file:

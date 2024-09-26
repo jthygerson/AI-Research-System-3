@@ -164,7 +164,7 @@ def main():
                         break
 
                 if best_idea:
-                    main_logger.info(f"Selected Best Idea: {best_idea['idea'][:50]}... with score {best_idea['score']}")
+                    main_logger.info(f"Selected Best Idea: {best_idea['idea']} with score {best_idea['score']}")
                 else:
                     main_logger.warning("No valid ideas were generated. Skipping this experiment run.")
                     continue
