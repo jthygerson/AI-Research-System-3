@@ -7,6 +7,7 @@ from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response
 import json
 import traceback
+import logging
 
 class FeedbackLoop:
     _instance = None
