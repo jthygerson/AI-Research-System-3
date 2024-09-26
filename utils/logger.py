@@ -14,9 +14,9 @@ def setup_logger(name, log_file, level=logging.DEBUG, console_level=logging.INFO
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)  # Capture all levels of logs
 
-    # Console Handler
+    # Console Handler (for INFO and ERROR only)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(console_level)
+    console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(console_formatter)
 
