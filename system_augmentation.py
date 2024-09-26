@@ -4,6 +4,7 @@ import os
 import ast
 import astor
 import subprocess
+import json  # Add this import
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai

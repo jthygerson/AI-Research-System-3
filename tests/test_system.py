@@ -11,6 +11,7 @@ from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 import logging
 import json
+from system_augmentation import SystemAugmentor
 
 class TestAIResearchSystem(unittest.TestCase):
     def tearDown(self):
