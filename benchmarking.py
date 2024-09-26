@@ -35,6 +35,10 @@ class Benchmarking:
 
     # ... (implement other evaluation methods)
 
+    def _evaluate_idea_evaluation(self):
+        # Implement evaluation logic
+        pass
+
     def _evaluate_error_fixing(self):
         # Implement evaluation logic
         pass

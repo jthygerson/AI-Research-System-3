@@ -14,7 +14,7 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
 client = openai.OpenAI()
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def create_completion(model, messages=None, prompt=None, max_tokens=100, temperature=0.7):
+def create_completion(model, messages=None, prompt=None, max_tokens=3500, temperature=0.7):
     logger.debug(f"Creating completion with model: {model}")
     logger.debug(f"Messages: {messages}")
     logger.debug(f"Prompt: {prompt}")

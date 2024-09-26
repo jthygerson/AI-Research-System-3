@@ -32,7 +32,7 @@ class LogErrorChecker:
                         {"role": "system", "content": "You are a system log analyzer."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=35000,
+                    max_tokens=3500,
                     temperature=0.5,
                 )
             else:
