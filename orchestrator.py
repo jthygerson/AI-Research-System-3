@@ -60,6 +60,19 @@ def hash_idea(idea):
     """
     return hashlib.md5(idea.encode()).hexdigest()
 
+def parse_and_validate_plan(plan):
+    """
+    Parse and validate the experiment plan.
+    """
+    try:
+        if isinstance(plan, str):
+            plan = json.loads(plan)
+        if not isinstance(plan, list) or not all(isinstance(step, dict) and 'action' in step for step in plan):
+            return None
+        return plan
+    except json.JSONDecodeError:
+        return None
+
 def main():
     # Initialize argument parser for command-line options
     parser = argparse.ArgumentParser(description='AI Research System Orchestrator')
@@ -165,13 +178,9 @@ def main():
                 main_logger.info("Designing experiment...")
                 experiment_designer = ExperimentDesigner(model_name)
                 experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
+                experiment_plan = parse_and_validate_plan(experiment_plan)
                 if not experiment_plan:
                     main_logger.error("Failed to design experiment. Skipping this experiment run.")
-                    continue
-
-                # Validate experiment plan
-                if not isinstance(experiment_plan, list) or not all(isinstance(step, dict) and 'action' in step for step in experiment_plan):
-                    main_logger.error("Invalid experiment plan structure. Skipping this experiment run.")
                     continue
 
                 # Safety check for the experiment plan
@@ -194,20 +203,9 @@ def main():
                 main_logger.info("Refining experiment plan...")
                 feedback_loop = FeedbackLoop(model_name)
                 refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
+                refined_plan = parse_and_validate_plan(refined_plan)
                 if not refined_plan:
                     main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
-                    continue
-
-                # After getting the refined_plan
-                if isinstance(refined_plan, str):
-                    try:
-                        refined_plan = json.loads(refined_plan)
-                    except json.JSONDecodeError:
-                        main_logger.error("Failed to parse refined plan as JSON. Skipping this experiment run.")
-                        continue
-
-                if not isinstance(refined_plan, list) or not all(isinstance(step, dict) for step in refined_plan):
-                    main_logger.error("Refined plan is not in the correct format. Skipping this experiment run.")
                     continue
 
                 main_logger.info("Experiment plan refined successfully.")
