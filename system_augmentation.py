@@ -4,7 +4,9 @@ import os
 import ast
 import astor
 import subprocess
-import json  # Add this import
+import json
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -14,9 +16,11 @@ from utils.json_utils import parse_llm_response
 class SystemAugmentor:
     def __init__(self, model_name=None):
         initialize_openai()
-        self.model_name = model_name or "gpt-4o"  # Default model if none provided
+        self.model_name = model_name or "gpt-4"  # Default model if none provided
         self.logger = setup_logger('system_augmentation', 'logs/system_augmentation.log')
         self.previous_performance = None
+        self.max_retries = 3
+        self.backoff_factor = 2
 
     def _run_benchmarks(self) -> PerformanceMetrics:
         # Implement benchmark tests for each metric
@@ -228,12 +232,12 @@ class SystemAugmentor:
             prompt = self._generate_augmentation_prompt(experiment_results)
             response = self._get_model_response(prompt)
             
-            self.logger.info(f"Code modifications suggested: {response}")
+            self.logger.info(f"Received model response. Length: {len(response)}")
+            self.logger.debug(f"Model response content: {response[:500]}...")  # Log first 500 characters
 
-            # Parse the response
             parsed_response = self._parse_modifications(response)
             if not parsed_response:
-                self.logger.warning("Failed to parse model response")
+                self.logger.warning("No valid modifications found in the model response.")
                 return
 
             if self._validate_modifications(parsed_response):
@@ -247,10 +251,164 @@ class SystemAugmentor:
                         self.logger.info("Changes reverted due to no performance improvement.")
                 else:
                     self._revert_changes()
+                    self.logger.warning("Tests failed after applying modifications. Changes reverted.")
             else:
                 self.logger.warning("Invalid code modifications suggested. Skipping application.")
         except Exception as e:
             self.logger.error(f"Error augmenting system: {e}", exc_info=True)
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def _get_model_response(self, prompt):
+        """
+        Gets the response from the OpenAI model with retry mechanism.
+        """
+        self.logger.debug(f"Attempting to get response from model: {self.model_name}")
+        
+        try:
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=3500,
+                temperature=0.7,
+            )
+            
+            # Attempt to parse the response as JSON
+            parsed_response = json.loads(response)
+            self.logger.debug(f"Successfully received and parsed response from model.")
+            return json.dumps(parsed_response)  # Ensure valid JSON string
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse model response as JSON: {e}")
+            raise  # Retry will be triggered
+        except Exception as e:
+            self.logger.error(f"Error getting model response: {e}")
+            raise  # Retry will be triggered
+
+    def _parse_modifications(self, response):
+        self.logger.info("Parsing code modifications...")
+        parsed_modifications = []
+        
+        try:
+            modifications = json.loads(response)
+            
+            if not isinstance(modifications, list):
+                self.logger.error(f"Expected a JSON array of modifications, got: {type(modifications)}")
+                return []
+            
+            for i, modification in enumerate(modifications):
+                if not isinstance(modification, dict):
+                    self.logger.warning(f"Skipping invalid modification at index {i}: {modification}")
+                    continue
+                
+                file_path = modification.get('file')
+                changes = modification.get('code')
+                
+                if not file_path or not changes:
+                    self.logger.warning(f"Skipping modification with missing 'file' or 'code' at index {i}: {modification}")
+                    continue
+                
+                parsed_modifications.append((file_path, changes))
+            
+            self.logger.info(f"Successfully parsed {len(parsed_modifications)} modifications.")
+        
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse response as JSON: {e}")
+        
+        return parsed_modifications
+
+    def _validate_modifications(self, modifications):
+        self.logger.info("Validating proposed modifications...")
+        
+        if not modifications:
+            self.logger.warning("No modifications to validate.")
+            return False
+        
+        for file_path, changes in modifications:
+            if not os.path.exists(file_path):
+                self.logger.error(f"File does not exist: {file_path}")
+                return False
+            
+            try:
+                ast.parse(changes)
+            except SyntaxError as e:
+                self.logger.error(f"Syntax error in proposed changes for {file_path}: {e}")
+                return False
+            
+            # Additional validation checks
+            if self._contains_unsafe_operations(changes):
+                self.logger.error(f"Unsafe operations detected in changes for {file_path}")
+                return False
+            
+            if not self._changes_are_relevant(file_path, changes):
+                self.logger.warning(f"Changes for {file_path} don't seem relevant to the file's purpose")
+                return False
+        
+        self.logger.info("All modifications passed validation.")
+        return True
+
+    def _contains_unsafe_operations(self, code):
+        # This is a basic check and should be expanded based on your specific security requirements
+        unsafe_operations = ['os.system', 'subprocess.call', 'eval', 'exec']
+        return any(op in code for op in unsafe_operations)
+
+    def _changes_are_relevant(self, file_path, changes):
+        # This is a placeholder function. Implement logic to check if changes are relevant to the file's purpose
+        # For example, you could check if the changes modify the main classes/functions in the file
+        return True
+
+    def _apply_code_modifications(self, code_modifications):
+        self.logger.info("Applying code modifications...")
+        for file_path, changes in code_modifications:
+            self._modify_file(file_path, changes)
+        
+        # Run tests after applying modifications
+        if not self._run_tests():
+            self._revert_changes()
+            self.logger.warning("Tests failed after applying modifications. Changes reverted.")
+
+    def _modify_file(self, file_path, changes):
+        self.logger.info(f"Modifying file: {file_path}")
+        backup_path = f"{file_path}.bak"
+        
+        # Create a backup of the original file
+        os.rename(file_path, backup_path)
+        
+        try:
+            with open(file_path, 'w') as file:
+                file.write(changes)
+            self.logger.info(f"Successfully modified {file_path}")
+        except Exception as e:
+            self.logger.error(f"Error modifying {file_path}: {e}")
+            os.rename(backup_path, file_path)  # Restore from backup
+            raise
+
+    def _run_tests(self):
+        self.logger.info("Running unit tests...")
+        try:
+            result = subprocess.run(['python', '-m', 'unittest', 'discover', 'tests'], capture_output=True, text=True)
+            if result.returncode == 0:
+                self.logger.info("All tests passed successfully.")
+                return True
+            else:
+                self.logger.error(f"Tests failed. Output: {result.stdout}\nErrors: {result.stderr}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error running tests: {e}")
+            return False
+
+    def _revert_changes(self):
+        self.logger.warning("Reverting changes...")
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                if file.endswith(".bak"):
+                    original_file = file[:-4]  # Remove .bak extension
+                    backup_path = os.path.join(root, file)
+                    original_path = os.path.join(root, original_file)
+                    os.rename(backup_path, original_path)
+                    self.logger.info(f"Reverted changes to {original_file}")
+        self.logger.info("All changes have been reverted.")
 
     def _generate_augmentation_prompt(self, experiment_results):
         return {
@@ -288,123 +446,3 @@ If no modifications are needed, return an empty array: []
             """,
             "output_format": "JSON"
         }
-
-    def _get_model_response(self, prompt):
-        """
-        Gets the response from the OpenAI model.
-        """
-        self.logger.debug(f"Using model: {self.model_name}")
-        
-        try:
-            response = create_completion(
-                self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
-                    {"role": "user", "content": json.dumps(prompt)}
-                ],
-                max_tokens=3500,
-                temperature=0.7,
-            )
-            
-            # Attempt to parse the response as JSON
-            parsed_response = json.loads(response)
-            return json.dumps(parsed_response)  # Ensure valid JSON string
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse model response as JSON: {e}")
-            return "[]"  # Return empty array as fallback
-        except Exception as e:
-            self.logger.error(f"Error getting model response: {e}")
-            return "[]"  # Return empty array as fallback
-
-    def _validate_modifications(self, modifications):
-        self.logger.info("Validating proposed modifications...")
-        
-        if not modifications:
-            self.logger.warning("No valid modifications found to validate.")
-            return False
-        
-        for file_path, changes in modifications:
-            try:
-                ast.parse(changes)
-            except SyntaxError as e:
-                self.logger.error(f"Syntax error in proposed changes for {file_path}: {e}")
-                return False
-        
-        return True
-
-    def _apply_code_modifications(self, code_modifications):
-        self.logger.info("Applying code modifications...")
-        for file_path, changes in code_modifications:
-            self._modify_file(file_path, changes)
-        
-        # Run tests after applying modifications
-        if not self._run_tests():
-            self._revert_changes()
-
-    def _parse_modifications(self, response):
-        self.logger.info("Parsing code modifications...")
-        parsed_modifications = []
-        
-        try:
-            # Attempt to parse the entire response as JSON
-            modifications = json.loads(response)
-            
-            if not isinstance(modifications, list):
-                self.logger.error("Expected a JSON array of modifications")
-                return []
-            
-            for modification in modifications:
-                if not isinstance(modification, dict):
-                    self.logger.warning(f"Skipping invalid modification: {modification}")
-                    continue
-                
-                file_path = modification.get('file')
-                changes = modification.get('code')
-                
-                if not file_path or not changes:
-                    self.logger.warning(f"Skipping modification with missing 'file' or 'code': {modification}")
-                    continue
-                
-                parsed_modifications.append((file_path, changes))
-        
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse response as JSON: {e}")
-            return []
-        
-        return parsed_modifications
-
-    def _modify_file(self, file_path, changes):
-        with open(file_path, 'r') as file:
-            tree = ast.parse(file.read())
-        
-        # Apply changes to the AST
-        # This is a simplified example and should be expanded
-        modified_tree = self._apply_changes_to_ast(tree, changes)
-        
-        # Write the modified AST back to the file
-        with open(file_path, 'w') as file:
-            file.write(astor.to_source(modified_tree))
-
-    def _apply_changes_to_ast(self, tree, changes):
-        # Implement logic to modify the AST based on the changes
-        # This is a placeholder and should be implemented based on the expected change format
-        return tree
-
-    def _run_tests(self):
-        self.logger.info("Running unit tests...")
-        try:
-            result = subprocess.run(['python', '-m', 'unittest', 'discover', 'tests'], capture_output=True, text=True)
-            if result.returncode == 0:
-                self.logger.info("All tests passed successfully.")
-                return True
-            else:
-                self.logger.error(f"Tests failed. Output: {result.stdout}\nErrors: {result.stderr}")
-                return False
-        except Exception as e:
-            self.logger.error(f"Error running tests: {e}")
-            return False
-
-    def _revert_changes(self):
-        self.logger.warning("Tests failed. Reverting changes...")
-        # Implement logic to revert the applied changes
-        # This could involve keeping backups of modified files and restoring them
