@@ -11,7 +11,7 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import json
-from utils.json_utils import parse_llm_response
+from utils.json_utils import parse_llm_response, extract_json_from_text
 import textwrap
 from pprint import pformat
 import traceback

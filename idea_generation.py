@@ -6,7 +6,7 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 import logging
-from utils.json_utils import parse_llm_response
+from utils.json_utils import parse_llm_response, extract_json_from_text
 from logging import getLogger
 import traceback
 
@@ -77,8 +77,11 @@ class IdeaGenerator:
             # Log the raw API response for debugging
             self.logger.info(f"\nRaw API response:\n{response}")
             
-            # Parse the JSON response
             parsed_response = parse_llm_response(response)
+            if parsed_response is None:
+                self.logger.warning("Failed to parse JSON response. Attempting to extract JSON from text.")
+                parsed_response = extract_json_from_text(response)
+
             if parsed_response:
                 # Extract ideas from the parsed JSON response
                 ideas = parsed_response.get('research_ideas', [])

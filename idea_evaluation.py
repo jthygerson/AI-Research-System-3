@@ -7,6 +7,7 @@ import ast  # Import AST module for safer parsing
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
+from utils.json_utils import parse_llm_response, extract_json_from_text  # Import the new function
 import time
 from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
@@ -79,10 +80,19 @@ class IdeaEvaluator:
             
             self.debug_logger.debug(f"Raw API response: {response}")
             
-            try:
-                evaluation_data = json.loads(response)
-            except json.JSONDecodeError:
-                self.logger.error(f"Failed to parse JSON response for idea '{idea[:50]}...'. Raw response: {response}")
+            evaluation_data = parse_llm_response(response)
+            
+            if evaluation_data is None:
+                self.logger.warning(f"Failed to parse response for idea '{idea[:50]}...'. Attempting to extract JSON from text.")
+                evaluation_data = extract_json_from_text(response)
+
+            if evaluation_data is None:
+                self.logger.error(f"Failed to parse response for idea '{idea[:50]}...'. Raw response: {response}")
+                return self.fallback_evaluation(idea, response)
+
+            # Ensure evaluation_data is a dictionary
+            if not isinstance(evaluation_data, dict):
+                self.logger.error(f"Parsed data is not a dictionary for idea '{idea[:50]}...'. Parsed data: {evaluation_data}")
                 return self.fallback_evaluation(idea, response)
 
             scores = evaluation_data.get('scores', {})

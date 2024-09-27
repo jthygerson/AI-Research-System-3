@@ -11,8 +11,19 @@ def parse_llm_response(response):
     try:
         # Parse the cleaned response
         parsed_json = json.loads(cleaned_response)
-        return parsed_json  # Return the parsed JSON directly without wrapping it
+        return parsed_json
     except json.JSONDecodeError as e:
         print(f"JSON parsing error: {e}")
         print(f"Problematic JSON string: {cleaned_response}")
         return None
+
+# Add a new function to handle potential nested JSON structures
+def extract_json_from_text(text):
+    json_pattern = r'\{(?:[^{}]|(?R))*\}'
+    match = re.search(json_pattern, text)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            return None
+    return None
