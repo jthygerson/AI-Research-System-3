@@ -11,6 +11,7 @@ def ensure_log_file(log_file):
 
 def setup_logger(name, log_file, level=logging.DEBUG, console_level=logging.INFO):
     """To setup as many loggers as you want"""
+    ensure_log_file(log_file)
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)  # Capture all levels of logs
 
