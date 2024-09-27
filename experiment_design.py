@@ -103,10 +103,16 @@ class ExperimentDesigner:
 
             if not isinstance(experiment_plan, dict):
                 self.logger.error(f"Unexpected experiment plan type: {type(experiment_plan)}")
+                self.logger.debug(f"Raw experiment plan content: {experiment_plan}")
                 return None
 
-            if 'methodology' not in experiment_plan or not isinstance(experiment_plan['methodology'], list):
-                self.logger.error("Invalid or missing 'methodology' in experiment plan.")
+            if 'methodology' not in experiment_plan:
+                self.logger.error("Missing 'methodology' in experiment plan.")
+                return None
+
+            if not isinstance(experiment_plan['methodology'], list):
+                self.logger.error(f"Invalid 'methodology' type: {type(experiment_plan['methodology'])}")
+                self.logger.debug(f"Raw methodology content: {experiment_plan['methodology']}")
                 return None
 
             experiment_plan['methodology'] = self.validate_and_fix_plan(experiment_plan['methodology'])
@@ -265,22 +271,36 @@ else:
 
     def pretty_print_experiment_plan(self, experiment_plan):
         self.logger.info("=== Experiment Plan Summary ===")
-        self.logger.info(f"Total steps: {len(experiment_plan)}")
-        self.logger.info("============================")
+        
+        if not isinstance(experiment_plan, dict):
+            self.logger.error(f"Invalid experiment plan type: {type(experiment_plan)}")
+            return
 
-        for i, step in enumerate(experiment_plan, 1):
-            self.logger.info(f"Step {i}:")
-            self.logger.info(f"  Action: {step['action']}")
-            
-            # Add a brief description based on the action type
-            description = self.get_step_description(step)
-            self.logger.info(f"  Description: {description}")
-            
-            for key, value in step.items():
-                if key != 'action':
-                    self.logger.info(f"  {key.capitalize()}:")
-                    self.logger.info(f"{pformat(value, indent=4)}")
-            self.logger.info("----------------------------")  # Separator between steps
+        methodology = experiment_plan.get('methodology', [])
+        
+        if isinstance(methodology, list):
+            self.logger.info(f"Total steps: {len(methodology)}")
+            self.logger.info("============================")
+
+            for i, step in enumerate(methodology, 1):
+                if isinstance(step, dict):
+                    self.logger.info(f"Step {i}:")
+                    self.logger.info(f"  Action: {step.get('action', 'Unknown')}")
+                    
+                    # Add a brief description based on the action type
+                    description = self.get_step_description(step)
+                    self.logger.info(f"  Description: {description}")
+                    
+                    for key, value in step.items():
+                        if key != 'action':
+                            self.logger.info(f"  {key.capitalize()}:")
+                            self.logger.info(f"{pformat(value, indent=4)}")
+                else:
+                    self.logger.warning(f"Step {i}: Invalid step type: {type(step)}")
+                self.logger.info("----------------------------")  # Separator between steps
+        else:
+            self.logger.error(f"Invalid methodology type: {type(methodology)}")
+            self.logger.info(f"Raw methodology content: {methodology}")
 
         self.logger.info("=== End of Experiment Plan ===")
 
