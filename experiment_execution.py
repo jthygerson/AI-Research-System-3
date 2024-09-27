@@ -232,3 +232,41 @@ class ExperimentExecutor:
             if normalized_action in existing_action:
                 return existing_action
         return None
+
+class UseLLMAPIStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        parameters = step.get('parameters', {})
+        prompt = parameters.get('prompt')
+        
+        if not prompt:
+            # Generate a default prompt based on the step description and parameters
+            prompt = f"Based on the following information, {step['description']} "
+            prompt += f"Model: {parameters.get('model', 'Unknown')}. "
+            prompt += f"Data: {parameters.get('data', 'Not provided')}. "
+            if 'knowledge_base' in parameters:
+                prompt += f"Knowledge base: {parameters['knowledge_base']}. "
+            prompt += "Please provide a detailed response."
+
+        return executor.use_llm_api(prompt)
+
+class UseGPUStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        parameters = step.get('parameters', {})
+        task = parameters.get('task') or parameters.get('code')
+        
+        if not task:
+            # Generate a default GPU task
+            task = """
+import torch
+
+if not torch.cuda.is_available():
+    print("GPU not available. Skipping GPU task.")
+else:
+    # Example task: Perform matrix multiplication on GPU
+    a = torch.randn(1000, 1000, device='cuda')
+    b = torch.randn(1000, 1000, device='cuda')
+    c = torch.matmul(a, b)
+    print("GPU task completed: Matrix multiplication")
+"""
+
+        return executor.use_gpu(task)
