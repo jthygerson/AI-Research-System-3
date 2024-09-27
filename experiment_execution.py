@@ -13,6 +13,8 @@ from utils.openai_utils import create_completion, handle_api_error
 from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response, extract_json_from_text
 from abc import ABC, abstractmethod
+import importlib
+import inspect
 
 from experiment_design import ExperimentDesigner
 import warnings
@@ -22,84 +24,61 @@ class ActionStrategy(ABC):
     def execute(self, step, executor):
         pass
 
-class InitializeOpenAIStrategy(ActionStrategy):
-    def execute(self, step, executor):
-        return executor.initialize_openai()
-
-class RunPythonCodeStrategy(ActionStrategy):
-    def execute(self, step, executor):
-        code = step.get('code', 'print("No code provided")')
-        return executor.run_python_code(code)
-
-class UseLLMAPIStrategy(ActionStrategy):
-    def execute(self, step, executor):
-        prompt = step.get('prompt')
-        if prompt is None and 'parameters' in step:
-            prompt = step['parameters'].get('prompt')
-            if prompt is None and 'args' in step['parameters']:
-                prompt = step['parameters']['args'].get('prompt')
-        
-        if prompt is None:
-            raise ValueError(f"No prompt provided for LLM API action. Step details: {step}")
-        return executor.use_llm_api(prompt)
-
-class WebRequestStrategy(ActionStrategy):
-    def execute(self, step, executor):
-        url = step.get('url')
-        method = step.get('method', 'GET')
-        if url is None:
-            raise ValueError("No URL provided for web request action")
-        return executor.make_web_request(url, method, retry_without_ssl=True)
-
-class UseGPUStrategy(ActionStrategy):
-    def execute(self, step, executor):
-        task = step.get('task')
-        if task is None:
-            raise ValueError("No task provided for GPU action")
-        return executor.use_gpu(task)
-
 class ExperimentExecutor:
-    def __init__(self, model_name, resource_manager, action_strategies):
+    def __init__(self, model_name, resource_manager):
         self.model_name = model_name
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
         self.experiment_designer = None
         initialize_openai()
-        self.action_strategies = action_strategies
+        self.action_strategies = {}
+        self.load_action_strategies()
+
+    def load_action_strategies(self):
+        # Dynamically load all action strategies from a dedicated module
+        strategy_module = importlib.import_module('action_strategies')
+        for name, obj in inspect.getmembers(strategy_module):
+            if inspect.isclass(obj) and issubclass(obj, ActionStrategy) and obj != ActionStrategy:
+                self.register_action(name.lower().replace('strategy', ''), obj())
+
+    def register_action(self, action_name, strategy):
+        self.action_strategies[action_name] = strategy
+        self.logger.info(f"Registered new action: {action_name}")
 
     def execute_experiment(self, experiment_plan):
-        self.experiment_designer = ExperimentDesigner(self.model_name)
         self.logger.info("Executing experiment...")
         
-        if not isinstance(experiment_plan, dict):
-            self.logger.error("Invalid experiment plan format. Expected a dictionary.")
+        if not isinstance(experiment_plan, dict) or 'methodology' not in experiment_plan:
+            self.logger.error("Invalid experiment plan format.")
             return None
         
-        methodology = experiment_plan.get('methodology', [])
-        if not isinstance(methodology, list):
-            self.logger.error("Invalid methodology format. Expected a list of steps.")
-            return None
-        
+        methodology = experiment_plan['methodology']
         results = []
+
         for step_number, step in enumerate(methodology, 1):
-            if not isinstance(step, dict):
-                self.logger.error(f"Invalid step format in step {step_number}. Expected a dictionary.")
-                return None
-            
+            if not isinstance(step, dict) or 'action' not in step:
+                self.logger.error(f"Invalid step format in step {step_number}.")
+                continue
+
             step_result = self.execute_step(step)
-            if 'error' in step_result:
+            if step_result.get('error'):
                 fixed_step = self.attempt_fix_step(step, step_result['error'])
                 if fixed_step:
                     step_result = self.execute_step(fixed_step)
-                    if 'error' in step_result:
-                        self.logger.error(f"Step {step_number} failed even after attempted fix. Stopping experiment.")
-                        return None
+                    if step_result.get('error'):
+                        self.logger.error(f"Step {step_number} failed even after attempted fix.")
+                        continue
                 else:
-                    self.logger.error(f"Unable to fix step {step_number}. Stopping experiment.")
-                    return None
-            
-            results.append({"step": step_number, "action": step['action'], "result": step_result, "status": "success" if 'error' not in step_result else "error"})
-        
+                    self.logger.error(f"Unable to fix step {step_number}.")
+                    continue
+
+            results.append({
+                "step": step_number,
+                "action": step['action'],
+                "result": step_result,
+                "status": "success" if not step_result.get('error') else "error"
+            })
+
         return results
 
     def execute_step(self, step):
@@ -109,7 +88,7 @@ class ExperimentExecutor:
             if strategy:
                 return strategy.execute(step, self)
             else:
-                raise ValueError(f"Unknown action: {action}")
+                return {"error": f"Unknown action: {action}"}
         except Exception as e:
             self.logger.error(f"Error executing step with action '{action}': {str(e)}")
             return {"error": str(e)}
@@ -237,6 +216,3 @@ class ExperimentExecutor:
 
     def use_gpu(self, task):
         return self.resource_manager.execute_gpu_task(task)
-
-    def register_action(self, action_name, strategy):
-        self.action_strategies[action_name] = strategy

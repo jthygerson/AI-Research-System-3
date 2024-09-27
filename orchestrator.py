@@ -17,7 +17,7 @@ from openai import OpenAIError
 from idea_generation import IdeaGenerator
 from idea_evaluation import IdeaEvaluator
 from experiment_design import ExperimentDesigner
-from experiment_execution import ExperimentExecutor, InitializeOpenAIStrategy, RunPythonCodeStrategy, UseLLMAPIStrategy, WebRequestStrategy, UseGPUStrategy
+from experiment_execution import ExperimentExecutor
 from feedback_loop import FeedbackLoop
 from system_augmentation import SystemAugmentor
 from benchmarking import Benchmarking
@@ -30,7 +30,7 @@ from utils.safety_checker import SafetyChecker
 from utils.logger import setup_logger, ensure_log_file
 from utils.code_backup import backup_code, restore_code
 from utils.config import initialize_openai
-from utils.resource_manager import ResourceManager  # Add this import
+from utils.resource_manager import ResourceManager
 
 # Set up loggers
 main_logger = setup_logger('main', 'logs/main.log', console_level=logging.INFO)
@@ -123,15 +123,6 @@ def main():
         # Set to store hashes of generated ideas to avoid duplicates
         all_idea_hashes = set()
 
-        # Define action strategies
-        action_strategies = {
-            'initialize_openai': InitializeOpenAIStrategy(),
-            'run_python_code': RunPythonCodeStrategy(),
-            'use_llm_api': UseLLMAPIStrategy(),
-            'web_request': WebRequestStrategy(),
-            'use_gpu': UseGPUStrategy()
-        }
-
         # Main experiment loop
         for experiment_run in range(args.num_experiments):
             debug_logger.info(f"\n--- Experiment Run {experiment_run + 1} ---")
@@ -202,7 +193,7 @@ def main():
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")
-                experiment_executor = ExperimentExecutor(model_name, resource_manager, action_strategies)  # Pass action_strategies here
+                experiment_executor = ExperimentExecutor(model_name, resource_manager)
                 results = experiment_executor.execute_experiment(experiment_plan)
                 if not results:
                     main_logger.error("Failed to execute experiment. Skipping this experiment run.")
