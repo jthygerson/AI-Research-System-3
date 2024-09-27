@@ -66,8 +66,14 @@ class ExperimentExecutor:
                 if fixed_step:
                     step_result = self.execute_step(fixed_step)
                     if step_result.get('error'):
-                        self.logger.error(f"Step {step_number} failed even after attempted fix.")
-                        continue
+                        # If the fixed step still fails, try to map it to an existing action
+                        mapped_action = self.map_to_existing_action(fixed_step['action'])
+                        if mapped_action:
+                            fixed_step['action'] = mapped_action
+                            step_result = self.execute_step(fixed_step)
+                        if step_result.get('error'):
+                            self.logger.error(f"Step {step_number} failed even after attempted fix and mapping.")
+                            continue
                 else:
                     self.logger.error(f"Unable to fix step {step_number}.")
                     continue
@@ -84,7 +90,9 @@ class ExperimentExecutor:
     def execute_step(self, step):
         action = step.get('action')
         try:
-            strategy = self.action_strategies.get(action)
+            # Convert action name to lowercase and remove underscores
+            normalized_action = action.lower().replace('_', '')
+            strategy = self.action_strategies.get(normalized_action)
             if strategy:
                 return strategy.execute(step, self)
             else:
@@ -95,8 +103,8 @@ class ExperimentExecutor:
 
     def attempt_fix_step(self, step, error):
         self.logger.info(f"Attempting to fix step: {step['action']}")
-        prompt = f"Fix the following experiment step that produced an error:\nStep: {json.dumps(step)}\nError: {error}\nProvide a fixed version of the step as a JSON object."
-        
+        prompt = f"Fix the following experiment step that produced an error:\nStep: {json.dumps(step)}\nError: {error}\nProvide a fixed version of the step as a JSON object. Ensure the 'action' field matches one of these valid actions: {', '.join(self.action_strategies.keys())}."
+
         try:
             response = create_completion(
                 self.model_name,
@@ -120,12 +128,10 @@ class ExperimentExecutor:
                     fixed_step = extract_json_from_text(response_content)
             
             if fixed_step:
-                # Ensure the fixed step has the correct structure
-                if 'action' not in fixed_step:
+                # Ensure the fixed step has the correct structure and action name
+                if 'action' not in fixed_step or fixed_step['action'].lower().replace('_', '') not in self.action_strategies:
+                    self.logger.warning(f"Invalid action in fixed step. Defaulting to original action: {step['action']}")
                     fixed_step['action'] = step['action']
-                if 'prompt' not in fixed_step and 'parameters' in fixed_step:
-                    if 'prompt' in fixed_step['parameters']:
-                        fixed_step['prompt'] = fixed_step['parameters']['prompt']
                 self.logger.info(f"Step fixed: {fixed_step}")
                 return fixed_step
             else:
@@ -170,11 +176,14 @@ class ExperimentExecutor:
                 if parsed_response:
                     return self.process_parsed_response(parsed_response)
                 else:
+                    self.logger.warning(f"Failed to parse LLM response: {cleaned_response}")
                     return {"raw_response": cleaned_response}
             else:
+                self.logger.error(f"Unexpected response format from LLM: {response}")
                 return {"error": "Unexpected response format from LLM"}
         except Exception as e:
             self.logger.error(f"Error in use_llm_api: {str(e)}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return {"error": str(e)}
 
     def clean_llm_response(self, response):
@@ -216,3 +225,10 @@ class ExperimentExecutor:
 
     def use_gpu(self, task):
         return self.resource_manager.execute_gpu_task(task)
+
+    def map_to_existing_action(self, action):
+        normalized_action = action.lower().replace('_', '')
+        for existing_action in self.action_strategies.keys():
+            if normalized_action in existing_action:
+                return existing_action
+        return None
