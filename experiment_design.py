@@ -95,23 +95,32 @@ class ExperimentDesigner:
             
             self.logger.debug(f"Raw API response: {response}")
 
-            parsed_response = parse_llm_response(response)
-            if parsed_response and isinstance(parsed_response, dict) and 'experiment_plan' in parsed_response:
-                experiment_plan = parsed_response['experiment_plan']
-                experiment_plan = self.validate_and_fix_plan(experiment_plan)
-            else:
-                self.logger.warning("Failed to parse JSON response or invalid structure.")
+            try:
+                experiment_plan = json.loads(response)
+                if not isinstance(experiment_plan, dict):
+                    raise ValueError("Experiment plan is not a dictionary")
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"Failed to parse JSON response: {e}")
+                return None
+            except ValueError as e:
+                self.logger.warning(f"Invalid experiment plan structure: {e}")
                 return None
 
-            if not experiment_plan or not isinstance(experiment_plan, list):
+            experiment_plan = self.validate_and_fix_plan(experiment_plan)
+
+            if not experiment_plan or not isinstance(experiment_plan, dict):
                 self.logger.error("Failed to generate a valid experiment plan.")
                 return None
 
             # Validate each step in the experiment plan
-            for step in experiment_plan:
-                if not isinstance(step, dict) or 'action' not in step:
-                    self.logger.error(f"Invalid step in experiment plan: {step}")
-                    return None
+            if 'methodology' in experiment_plan and isinstance(experiment_plan['methodology'], list):
+                for step in experiment_plan['methodology']:
+                    if not isinstance(step, dict) or 'action' not in step:
+                        self.logger.error(f"Invalid step in experiment plan: {step}")
+                        return None
+            else:
+                self.logger.error("Invalid or missing 'methodology' in experiment plan.")
+                return None
 
             # Check for required modules
             required_modules = ['rpa']  # Add other required modules here
@@ -122,7 +131,7 @@ class ExperimentDesigner:
                     self.logger.warning(f"Required module '{module}' is not installed. Please install it before running the experiment.")
 
             # Fix indentation in generated Python code
-            for step in experiment_plan:
+            for step in experiment_plan.get('methodology', []):
                 if step['action'] == 'run_python_code' and 'code' in step:
                     step['code'] = textwrap.dedent(step['code']).strip()
 
