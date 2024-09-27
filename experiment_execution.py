@@ -12,12 +12,14 @@ import re
 from utils.openai_utils import create_completion  # Make sure this import exists
 from utils.config import initialize_openai
 import requests.exceptions
+from experiment_design import ExperimentDesigner  # Add this import at the top of the file
 
 class ExperimentExecutor:
     def __init__(self, model_name, resource_manager):
         self.model_name = model_name
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
+        self.experiment_designer = ExperimentDesigner(model_name)  # Add this line
 
     def execute_experiment(self, experiment_plan):
         self.logger.info("Executing experiment...")
@@ -52,7 +54,16 @@ class ExperimentExecutor:
             elif action == 'use_llm_api':
                 return self.use_llm_api(step.get('prompt'))
             elif action == 'web_request':
-                return self.make_web_request(step.get('url'), step.get('method', 'GET'))
+                try:
+                    return self.make_web_request(step.get('url'), step.get('method', 'GET'))
+                except requests.exceptions.RequestException as e:
+                    new_step = self.experiment_designer.request_plan_adjustment(step, str(e))
+                    if new_step:
+                        self.logger.info(f"Retrying with new step: {new_step}")
+                        return self.execute_step(new_step)  # Recursively try the new step
+                    else:
+                        self.logger.error(f"Failed to create a new step. Original error: {str(e)}. Skipping this step.")
+                        return {"error": f"Original error: {str(e)}. Failed to create a new step."}
             elif action == 'use_gpu':
                 return self.use_gpu(step.get('task'))
             else:

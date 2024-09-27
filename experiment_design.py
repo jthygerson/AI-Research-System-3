@@ -257,3 +257,34 @@ else:
                     else:
                         self.logger.info(f"  {key.capitalize()}: {pformat(value, indent=4)}")
             self.logger.info("")  # Add a blank line between steps
+
+    def request_plan_adjustment(self, step, error):
+        self.logger.info(f"Requesting plan adjustment for step: {step['action']}")
+        prompt = {
+            "task": "adjust_experiment_plan",
+            "step": step,
+            "error": error,
+            "instructions": (
+                "An error occurred during the execution of this step. Please analyze the error and propose an adjustment to the experiment plan. "
+                "Consider alternative actions or parameters that could achieve the same goal without encountering this error. "
+                "Return the adjusted step as a JSON object with the same structure as the original step."
+            )
+        }
+        
+        response = create_completion(
+            self.model_name,
+            messages=[
+                {"role": "system", "content": "You are an AI assistant specialized in adjusting experiment plans when errors occur."},
+                {"role": "user", "content": json.dumps(prompt)}
+            ],
+            max_tokens=3500,
+            temperature=0.7,
+        )
+        
+        try:
+            adjusted_step = json.loads(response)
+            self.logger.info(f"Step adjusted: {adjusted_step}")
+            return adjusted_step
+        except json.JSONDecodeError:
+            self.logger.error("Failed to parse LLM response for plan adjustment")
+            return None
