@@ -258,33 +258,46 @@ else:
                         self.logger.info(f"  {key.capitalize()}: {pformat(value, indent=4)}")
             self.logger.info("")  # Add a blank line between steps
 
-    def request_plan_adjustment(self, step, error):
+    def adjust_plan(self, step, error_message):
         self.logger.info(f"Requesting plan adjustment for step: {step['action']}")
-        prompt = {
-            "task": "adjust_experiment_plan",
-            "step": step,
-            "error": error,
-            "instructions": (
-                "An error occurred during the execution of this step. Please analyze the error and propose an adjustment to the experiment plan. "
-                "Consider alternative actions or parameters that could achieve the same goal without encountering this error. "
-                "Return the adjusted step as a JSON object with the same structure as the original step."
-            )
-        }
-        
-        response = create_completion(
-            self.model_name,
-            messages=[
-                {"role": "system", "content": "You are an AI assistant specialized in adjusting experiment plans when errors occur."},
-                {"role": "user", "content": json.dumps(prompt)}
-            ],
-            max_tokens=3500,
-            temperature=0.7,
-        )
-        
         try:
-            adjusted_step = json.loads(response)
-            self.logger.info(f"Step adjusted: {adjusted_step}")
-            return adjusted_step
-        except json.JSONDecodeError:
-            self.logger.error("Failed to parse LLM response for plan adjustment")
+            prompt = f"""
+            The following step in an experiment plan encountered an error:
+            Step: {step}
+            Error: {error_message}
+
+            Please suggest an adjustment to this step to resolve the error. 
+            Provide your response as a valid JSON object with the adjusted step details.
+            """
+
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI assistant helping to adjust experiment plans."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+
+            self.logger.debug(f"Raw LLM response for plan adjustment: {response}")
+
+            # Try to extract JSON from the response
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                adjusted_step = json.loads(json_str)
+                self.logger.info(f"Successfully adjusted step: {adjusted_step}")
+                return adjusted_step
+            else:
+                self.logger.error("No valid JSON found in LLM response")
+                return None
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse LLM response for plan adjustment: {e}")
+            self.logger.debug(f"Problematic JSON string: {json_str}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error in plan adjustment: {e}")
+            self.logger.debug(traceback.format_exc())
             return None
