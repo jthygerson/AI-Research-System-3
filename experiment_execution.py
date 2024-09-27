@@ -14,6 +14,7 @@ from utils.config import initialize_openai
 import requests.exceptions
 from experiment_design import ExperimentDesigner  # Add this import at the top of the file
 import warnings
+from utils.json_utils import parse_llm_response, extract_json_from_text
 
 class ExperimentExecutor:
     def __init__(self, model_name, resource_manager):
@@ -58,7 +59,10 @@ class ExperimentExecutor:
         action = step.get('action')
         try:
             if action == 'run_python_code':
-                return self.run_python_code(step.get('code'))
+                code = step.get('code')
+                if code is None:
+                    raise ValueError("No code provided for 'run_python_code' action")
+                return self.run_python_code(code)
             elif action == 'use_llm_api':
                 return self.use_llm_api(step.get('prompt'))
             elif action == 'web_request':
@@ -82,29 +86,43 @@ class ExperimentExecutor:
 
     def attempt_fix_step(self, step, error):
         self.logger.info(f"Attempting to fix step: {step['action']}")
-        prompt = {
+        prompt = json.dumps({
             "task": "fix_experiment_step",
             "step": step,
-            "error": error,
+            "error": str(error),
             "instructions": "Analyze the given step and the error it produced. Propose a fix for the step that addresses the error. Return the fixed step as a JSON object with the same structure as the original step."
-        }
-        
-        response = create_completion(
-            self.model_name,
-            messages=[
-                {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
-                {"role": "user", "content": json.dumps(prompt)}
-            ],
-            max_tokens=3500,
-            temperature=0.7,
-        )
+        })
         
         try:
-            fixed_step = json.loads(response)
-            self.logger.info(f"Step fixed: {fixed_step}")
-            return fixed_step
-        except json.JSONDecodeError:
-            self.logger.error("Failed to parse LLM response for step fix")
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3500,
+                temperature=0.7,
+            )
+            
+            # Extract the content from the response
+            response_content = response.choices[0].message.content if response.choices else None
+            
+            if response_content:
+                fixed_step = parse_llm_response(response_content)
+                if fixed_step is None:
+                    fixed_step = extract_json_from_text(response_content)
+                
+                if fixed_step:
+                    self.logger.info(f"Step fixed: {fixed_step}")
+                    return fixed_step
+                else:
+                    self.logger.error("Failed to parse LLM response for step fix")
+                    return None
+            else:
+                self.logger.error("Empty response from LLM")
+                return None
+        except Exception as e:
+            self.logger.error(f"Error in attempt_fix_step: {str(e)}")
             return None
 
     def run_python_code(self, code):
@@ -114,25 +132,35 @@ class ExperimentExecutor:
         return {'stdout': result.stdout, 'stderr': result.stderr}
 
     def use_llm_api(self, prompt):
-        response = create_completion(
-            self.model_name,
-            messages=[
-                {"role": "system", "content": "You are an AI assistant helping with experiments."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=3500  # Increased to allow for longer responses
-        )
-        
-        # Clean and parse the response
-        cleaned_response = self.clean_llm_response(response)
-        
         try:
-            # Attempt to parse as JSON
-            parsed_response = json.loads(cleaned_response)
-            return self.process_parsed_response(parsed_response)
-        except json.JSONDecodeError:
-            # If it's not valid JSON, return the original cleaned response
-            return {"raw_response": cleaned_response}
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI assistant helping with experiments."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3500
+            )
+            
+            # Extract the content from the response
+            response_content = response.choices[0].message.content if response.choices else None
+            
+            if response_content:
+                cleaned_response = self.clean_llm_response(response_content)
+                parsed_response = parse_llm_response(cleaned_response)
+                
+                if parsed_response is None:
+                    parsed_response = extract_json_from_text(cleaned_response)
+                
+                if parsed_response:
+                    return self.process_parsed_response(parsed_response)
+                else:
+                    return {"raw_response": cleaned_response}
+            else:
+                return {"error": "Empty response from LLM"}
+        except Exception as e:
+            self.logger.error(f"Error in use_llm_api: {str(e)}")
+            return {"error": str(e)}
 
     def clean_llm_response(self, response):
         # Remove any markdown code block syntax
