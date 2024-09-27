@@ -95,22 +95,21 @@ class ExperimentDesigner:
             
             self.logger.debug(f"Raw API response: {response}")
 
-            try:
-                experiment_plan = json.loads(response)
-                if not isinstance(experiment_plan, dict):
-                    raise ValueError("Experiment plan is not a dictionary")
-            except json.JSONDecodeError as e:
-                self.logger.warning(f"Failed to parse JSON response: {e}")
-                self.logger.warning(f"Attempting to extract JSON from text...")
-                experiment_plan = extract_json_from_text(response)
-                if not experiment_plan:
-                    self.logger.error("Failed to extract JSON from response")
-                    return None
-            except ValueError as e:
-                self.logger.warning(f"Invalid experiment plan structure: {e}")
+            experiment_plan = parse_llm_response(response)
+            
+            if not experiment_plan:
+                self.logger.error("Failed to parse the API response.")
                 return None
 
-            experiment_plan = self.validate_and_fix_plan(experiment_plan)
+            if not isinstance(experiment_plan, dict):
+                self.logger.error(f"Unexpected experiment plan type: {type(experiment_plan)}")
+                return None
+
+            if 'methodology' not in experiment_plan or not isinstance(experiment_plan['methodology'], list):
+                self.logger.error("Invalid or missing 'methodology' in experiment plan.")
+                return None
+
+            experiment_plan['methodology'] = self.validate_and_fix_plan(experiment_plan['methodology'])
 
             if not experiment_plan or not isinstance(experiment_plan, dict):
                 self.logger.error("Failed to generate a valid experiment plan.")
@@ -147,15 +146,21 @@ class ExperimentDesigner:
             self.logger.error(traceback.format_exc())
             return None
 
-    def validate_and_fix_plan(self, plan):
-        fixed_plan = []
-        for step in plan:
+    def validate_and_fix_plan(self, methodology):
+        fixed_methodology = []
+        for step in methodology:
+            if not isinstance(step, dict):
+                self.logger.warning(f"Skipping invalid step: {step}")
+                continue
+            if 'action' not in step:
+                self.logger.warning(f"Skipping step without action: {step}")
+                continue
             if step['action'] == 'web_request':
                 step = self.fix_web_request_step(step, max_retries=3)
             elif step['action'] == 'use_gpu':
                 step = self.add_gpu_check(step)
-            fixed_plan.append(step)
-        return fixed_plan
+            fixed_methodology.append(step)
+        return fixed_methodology
 
     def fix_web_request_step(self, step, max_retries=3):
         if 'example.com' not in step.get('url', ''):
