@@ -33,9 +33,14 @@ class RunPythonCodeStrategy(ActionStrategy):
 
 class UseLLMAPIStrategy(ActionStrategy):
     def execute(self, step, executor):
-        prompt = step.get('prompt') or step.get('parameters', {}).get('prompt')
+        prompt = step.get('prompt')
+        if prompt is None and 'parameters' in step:
+            prompt = step['parameters'].get('prompt')
+            if prompt is None and 'args' in step['parameters']:
+                prompt = step['parameters']['args'].get('prompt')
+        
         if prompt is None:
-            raise ValueError("No prompt provided for LLM API action")
+            raise ValueError(f"No prompt provided for LLM API action. Step details: {step}")
         return executor.use_llm_api(prompt)
 
 class WebRequestStrategy(ActionStrategy):
