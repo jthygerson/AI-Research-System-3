@@ -62,8 +62,16 @@ def parse_and_validate_plan(plan):
     try:
         if isinstance(plan, str):
             plan = json.loads(plan)
-        if not isinstance(plan, list) or not all(isinstance(step, dict) and 'action' in step for step in plan):
+        if not isinstance(plan, dict):
             return None
+        required_keys = ['hypothesis', 'variables', 'methodology', 'data_collection', 'analysis_plan']
+        if not all(key in plan for key in required_keys):
+            return None
+        if not isinstance(plan['methodology'], list):
+            return None
+        for step in plan['methodology']:
+            if not isinstance(step, dict) or 'action' not in step:
+                return None
         return plan
     except json.JSONDecodeError:
         return None
@@ -177,7 +185,7 @@ def main():
                     continue
 
                 # Safety check for the experiment plan
-                if not safety_checker.check_experiment_plan(experiment_plan):
+                if not safety_checker.check_experiment_plan(experiment_plan['methodology']):
                     main_logger.warning("Experiment plan failed safety check. Skipping this experiment run.")
                     continue
 

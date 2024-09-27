@@ -25,12 +25,18 @@ class ExperimentExecutor:
     def execute_experiment(self, experiment_plan):
         self.experiment_designer = ExperimentDesigner(self.model_name)  # Create a new instance here
         self.logger.info("Executing experiment...")
-        if not isinstance(experiment_plan, list):
-            self.logger.error("Invalid experiment plan format. Expected a list of steps.")
+        
+        if not isinstance(experiment_plan, dict):
+            self.logger.error("Invalid experiment plan format. Expected a dictionary.")
+            return []
+        
+        methodology = experiment_plan.get('methodology', [])
+        if not isinstance(methodology, list):
+            self.logger.error("Invalid methodology format. Expected a list of steps.")
             return []
         
         results = []
-        for step_number, step in enumerate(experiment_plan, 1):
+        for step_number, step in enumerate(methodology, 1):
             if not isinstance(step, dict):
                 self.logger.error(f"Invalid step format in step {step_number}. Expected a dictionary.")
                 continue

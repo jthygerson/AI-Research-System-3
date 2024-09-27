@@ -1,6 +1,12 @@
 # experiment_design.py
 
 import os
+import re
+import sys
+import platform
+import psutil
+import GPUtil
+import subprocess
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
@@ -8,8 +14,7 @@ import json
 from utils.json_utils import parse_llm_response
 import textwrap
 from pprint import pformat
-import traceback  # Add this import at the top of the file
-import re  # Add this import at the top of the file
+import traceback
 import logging
 
 class ExperimentDesigner:
@@ -30,54 +35,49 @@ class ExperimentDesigner:
     def design_experiment(self, idea):
         self.logger.info(f"Designing experiment for idea: {idea}")
         try:
+            codebase_summary = self.get_codebase_summary()
+            system_specs = self.get_system_specs()
+            
             prompt = {
-                "task": "design_experiment",
+                "task": "design_scientific_experiment",
                 "idea": idea,
+                "codebase_summary": codebase_summary,
+                "system_specs": system_specs,
                 "instructions": (
-                    "Design a concrete, executable experiment plan to test the given idea "
-                    "for improving AI-Research-System-3. Provide the experiment plan as a valid JSON object "
-                    "with an 'experiment_plan' key containing a list of steps. Each step should be a dictionary "
-                    "with an 'action' key and any necessary parameters.\n\n"
-                    "Possible actions include:\n"
-                    "1. 'run_python_code': Execute Python code (provide 'code' parameter)\n"
-                    "2. 'use_llm_api': Make a request to an LLM API (provide 'prompt' parameter)\n"
-                    "3. 'web_request': Make a web request (provide 'url' and optionally 'method' parameters)\n"
-                    "4. 'use_gpu': Perform a GPU task (provide 'task' parameter)\n\n"
-                    "Include the following in your plan:\n"
-                    "1. Objectives: Which performance metrics the experiment aims to improve\n"
-                    "2. Methodology: Steps to implement and test the idea\n"
-                    "3. Resources required: Additional tools or data needed\n"
-                    "4. Expected outcomes: Anticipated improvements in specific performance metrics\n"
-                    "5. Evaluation criteria: How to measure the success of the experiment\n\n"
-                    "Example of expected JSON format:\n"
+                    "Design a rigorous scientific experiment to test the given idea for improving AI-Research-System-3. "
+                    "The experiment should be concrete, executable, and aimed at yielding novel knowledge that can be directly applied to enhance the current codebase. "
+                    "Provide the experiment plan as a valid JSON object with the following structure:\n\n"
                     "{\n"
-                    "  \"experiment_plan\": [\n"
+                    "  \"hypothesis\": \"A clear, testable hypothesis based on the idea\",\n"
+                    "  \"variables\": {\n"
+                    "    \"independent\": [\"List of independent variables\"],\n"
+                    "    \"dependent\": [\"List of dependent variables\"],\n"
+                    "    \"controlled\": [\"List of controlled variables\"]\n"
+                    "  },\n"
+                    "  \"methodology\": [\n"
                     "    {\n"
-                    "      \"action\": \"run_python_code\",\n"
-                    "      \"code\": \"import tensorflow as tf\\n# Rest of the code...\"\n"
-                    "    },\n"
-                    "    {\n"
-                    "      \"action\": \"use_llm_api\",\n"
-                    "      \"prompt\": \"Analyze the following experiment results...\"\n"
-                    "    },\n"
-                    "    {\n"
-                    "      \"action\": \"web_request\",\n"
-                    "      \"url\": \"https://api.example.com/data\",\n"
-                    "      \"method\": \"GET\"\n"
-                    "    },\n"
-                    "    {\n"
-                    "      \"action\": \"use_gpu\",\n"
-                    "      \"task\": \"Train neural network model XYZ\"\n"
+                    "      \"step\": \"Step number\",\n"
+                    "      \"action\": \"One of: 'run_python_code', 'use_llm_api', 'web_request', 'use_gpu'\",\n"
+                    "      \"description\": \"Detailed description of the step\",\n"
+                    "      \"parameters\": {\"Relevant parameters for the action\"}\n"
                     "    }\n"
                     "  ],\n"
-                    "  \"objectives\": [\"Improve idea generation quality\", \"Enhance experiment execution efficiency\"],\n"
-                    "  \"resources_required\": [\"TensorFlow library\", \"GPU access\"],\n"
-                    "  \"expected_outcomes\": [\"20% increase in idea quality scores\", \"30% reduction in experiment execution time\"],\n"
-                    "  \"evaluation_criteria\": [\"Compare idea quality scores before and after implementation\", \"Measure average experiment execution time\"]\n"
+                    "  \"data_collection\": \"Description of how data will be collected and measured\",\n"
+                    "  \"analysis_plan\": \"Description of how the collected data will be analyzed\",\n"
+                    "  \"expected_outcomes\": \"Anticipated results and their implications for the codebase\",\n"
+                    "  \"potential_challenges\": \"Possible obstacles and mitigation strategies\",\n"
+                    "  \"ethical_considerations\": \"Any ethical issues to be addressed\",\n"
+                    "  \"resources_required\": [\"List of necessary tools, libraries, or data\"]\n"
                     "}\n\n"
-                    "Ensure your response is a single, valid JSON object following this structure. "
-                    "Ensure that all steps are executable and do not rely on non-existent resources or APIs. "
-                    "For web requests, use real, accessible URLs. For GPU tasks, include a check for GPU availability."
+                    "Ensure that:\n"
+                    "1. The experiment directly addresses the improvement of the AI-Research-System-3 codebase.\n"
+                    "2. The methodology is detailed, reproducible, and follows scientific best practices.\n"
+                    "3. The experiment can be executed within the constraints of the current system.\n"
+                    "4. The analysis plan includes statistical methods where appropriate.\n"
+                    "5. The expected outcomes are specific and quantifiable where possible.\n"
+                    "6. All code snippets, API calls, and web requests are realistic and executable.\n"
+                    "7. GPU tasks include checks for GPU availability.\n"
+                    "8. The experiment considers potential impacts on system performance and reliability.\n"
                 ),
                 "output_format": "JSON"
             }
@@ -170,7 +170,7 @@ class ExperimentDesigner:
                         {"role": "system", "content": "You are an AI assistant specialized in fixing experiment steps. Always respond with valid JSON containing only the fixed step."},
                         {"role": "user", "content": json.dumps(prompt)}
                     ],
-                    max_tokens=200,
+                    max_tokens=3500,
                     temperature=0.7,
                 )
                 self.logger.debug(f"LLM response for web request fix (attempt {attempt + 1}): {response}")
@@ -323,3 +323,60 @@ else:
             self.logger.error(f"Unexpected error in plan adjustment: {e}")
             self.logger.debug(traceback.format_exc())
             return None
+
+    def get_codebase_summary(self):
+        codebase_summary = {
+            "description": "AI-Research-System-3 is an autonomous AI research system designed to generate ideas, design experiments, execute them, and improve itself based on the results.",
+            "main_components": [
+                "IdeaGenerator: Generates research ideas using LLM API",
+                "IdeaEvaluator: Evaluates and scores generated ideas",
+                "ExperimentDesigner: Designs experiments based on selected ideas",
+                "ExperimentExecutor: Executes designed experiments",
+                "FeedbackLoop: Refines experiments based on initial results",
+                "SystemAugmentor: Improves the system based on experiment outcomes",
+                "Benchmarking: Evaluates system performance",
+                "ReportWriter: Generates comprehensive reports of research findings",
+                "LogErrorChecker: Analyzes log files for errors and warnings",
+                "ErrorFixer: Attempts to fix identified errors automatically"
+            ],
+            "augmentable_functions": self.get_augmentable_functions()
+        }
+        return codebase_summary
+
+    def get_augmentable_functions(self):
+        augmentable_functions = []
+        for root, dirs, files in os.walk('.'):
+            for file in files:
+                if file.endswith('.py'):
+                    with open(os.path.join(root, file), 'r') as f:
+                        content = f.read()
+                        class_matches = re.findall(r'class\s+(\w+):', content)
+                        for class_name in class_matches:
+                            method_matches = re.findall(r'def\s+(\w+)\(self', content)
+                            for method_name in method_matches:
+                                augmentable_functions.append(f"{class_name}.{method_name}")
+        return augmentable_functions
+
+    def get_system_specs(self):
+        def get_gpu_info():
+            try:
+                gpus = GPUtil.getGPUs()
+                if gpus:
+                    return f"{gpus[0].name}, {gpus[0].memoryTotal}MB"
+                else:
+                    return "No GPU detected"
+            except:
+                return "Unable to detect GPU"
+
+        def get_installed_packages():
+            return subprocess.check_output([sys.executable, '-m', 'pip', 'freeze']).decode('utf-8').split('\n')
+
+        return {
+            "os": f"{platform.system()} {platform.release()}",
+            "cpu": platform.processor(),
+            "ram": f"{psutil.virtual_memory().total / (1024.0 ** 3):.1f} GB",
+            "storage": f"{psutil.disk_usage('/').total / (1024.0 ** 3):.1f} GB",
+            "gpu": get_gpu_info(),
+            "python_version": platform.python_version(),
+            "available_libraries": get_installed_packages()
+        }
