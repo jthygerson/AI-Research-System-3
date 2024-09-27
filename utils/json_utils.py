@@ -2,11 +2,11 @@ import json
 import re
 
 def parse_llm_response(response):
-    # Remove markdown code block formatting if present
-    cleaned_response = re.sub(r'^```json\s*|```\s*$', '', response.strip())
+    # Remove any leading/trailing whitespace
+    cleaned_response = response.strip()
     
-    # Remove any line breaks within the JSON structure
-    cleaned_response = re.sub(r'\n\s*', ' ', cleaned_response)
+    # Remove any line breaks and extra spaces within the JSON structure
+    cleaned_response = re.sub(r'\s+', ' ', cleaned_response)
     
     try:
         # Parse the cleaned response

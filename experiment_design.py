@@ -101,7 +101,11 @@ class ExperimentDesigner:
                     raise ValueError("Experiment plan is not a dictionary")
             except json.JSONDecodeError as e:
                 self.logger.warning(f"Failed to parse JSON response: {e}")
-                return None
+                self.logger.warning(f"Attempting to extract JSON from text...")
+                experiment_plan = extract_json_from_text(response)
+                if not experiment_plan:
+                    self.logger.error("Failed to extract JSON from response")
+                    return None
             except ValueError as e:
                 self.logger.warning(f"Invalid experiment plan structure: {e}")
                 return None
