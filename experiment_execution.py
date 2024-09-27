@@ -132,6 +132,14 @@ class ExperimentExecutor:
                 if 'action' not in fixed_step or fixed_step['action'].lower().replace('_', '') not in self.action_strategies:
                     self.logger.warning(f"Invalid action in fixed step. Defaulting to original action: {step['action']}")
                     fixed_step['action'] = step['action']
+                
+                # Ensure there are no duplicate 'code' keys in parameters
+                if 'parameters' in fixed_step and 'code' in fixed_step['parameters']:
+                    if isinstance(fixed_step['parameters']['code'], list):
+                        fixed_step['parameters']['code'] = '\n'.join(filter(None, fixed_step['parameters']['code']))
+                    elif not fixed_step['parameters']['code']:
+                        del fixed_step['parameters']['code']
+                
                 self.logger.info(f"Step fixed: {fixed_step}")
                 return fixed_step
             else:
