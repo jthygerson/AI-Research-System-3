@@ -2,9 +2,14 @@ import json
 import re
 
 def parse_llm_response(response):
-    # Remove any leading/trailing whitespace
-    cleaned_response = response.strip()
-    
+    if isinstance(response, str):
+        cleaned_response = response.strip()
+    elif hasattr(response, 'choices') and response.choices:
+        cleaned_response = response.choices[0].message.content.strip()
+    else:
+        print("Unexpected response format")
+        return None
+
     # Remove any line breaks and extra spaces within the JSON structure
     cleaned_response = re.sub(r'\s+', ' ', cleaned_response)
     

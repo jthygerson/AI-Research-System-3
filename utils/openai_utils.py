@@ -22,9 +22,9 @@ def create_completion(model, messages, max_tokens=3500, temperature=0.7):
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        return response
+        return response.choices[0].message.content if response.choices else None
     except Exception as e:
-        print(f"Error in create_completion: {str(e)}")
+        logger.error(f"Error in create_completion: {str(e)}")
         raise
 
 def handle_api_error(func):
