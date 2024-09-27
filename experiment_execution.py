@@ -62,20 +62,20 @@ class ExperimentExecutor:
 
             step_result = self.execute_step(step)
             if step_result.get('error'):
+                self.logger.error(f"Error in step {step_number}: {step_result['error']}")
                 fixed_step = self.attempt_fix_step(step, step_result['error'])
                 if fixed_step:
                     step_result = self.execute_step(fixed_step)
                     if step_result.get('error'):
-                        # If the fixed step still fails, try to map it to an existing action
                         mapped_action = self.map_to_existing_action(fixed_step['action'])
                         if mapped_action:
                             fixed_step['action'] = mapped_action
                             step_result = self.execute_step(fixed_step)
                         if step_result.get('error'):
-                            self.logger.error(f"Step {step_number} failed even after attempted fix and mapping.")
+                            self.logger.error(f"Step {step_number} failed even after attempted fix and mapping. Error: {step_result['error']}")
                             continue
                 else:
-                    self.logger.error(f"Unable to fix step {step_number}.")
+                    self.logger.error(f"Unable to fix step {step_number}. Skipping this step.")
                     continue
 
             results.append({
@@ -152,17 +152,25 @@ class ExperimentExecutor:
         result = subprocess.run(['python', '-c', code], capture_output=True, text=True)
         return {'stdout': result.stdout, 'stderr': result.stderr}
 
-    def use_llm_api(self, prompt):
+    def use_llm_api(self, prompt, endpoint=None, payload=None):
         try:
-            response = create_completion(
-                self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are an AI assistant helping with experiments."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=3500
-            )
+            # If an endpoint is provided, use it to call a specific API
+            if endpoint:
+                # Implement the logic to call the specific endpoint with the payload
+                # This is a placeholder and should be replaced with actual API call logic
+                response = f"API call to {endpoint} with payload {payload}"
+            else:
+                # Use the default OpenAI completion if no specific endpoint is provided
+                response = create_completion(
+                    self.model_name,
+                    messages=[
+                        {"role": "system", "content": "You are an AI assistant helping with experiments."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=3500
+                )
             
+            # Process the response as before
             if isinstance(response, str):
                 return {"raw_response": response}
             elif hasattr(response, 'choices') and response.choices:
@@ -246,15 +254,17 @@ class UseLLMAPIStrategy(ActionStrategy):
         prompt = parameters.get('prompt')
         
         if not prompt:
+            payload = parameters.get('payload', {})
+            prompt = payload.get('prompt')
+
+        if not prompt:
             # Generate a default prompt based on the step description and parameters
             prompt = f"Based on the following information, {step['description']} "
-            prompt += f"Model: {parameters.get('model', 'Unknown')}. "
-            prompt += f"Data: {parameters.get('data', 'Not provided')}. "
-            if 'knowledge_base' in parameters:
-                prompt += f"Knowledge base: {parameters['knowledge_base']}. "
+            prompt += f"Endpoint: {parameters.get('llm_endpoint', 'Unknown')}. "
+            prompt += f"Payload: {parameters.get('payload', 'Not provided')}. "
             prompt += "Please provide a detailed response."
 
-        return executor.use_llm_api(prompt)
+        return executor.use_llm_api(prompt, parameters.get('llm_endpoint'), parameters.get('payload'))
 
 class UseGPUStrategy(ActionStrategy):
     def execute(self, step, executor):
