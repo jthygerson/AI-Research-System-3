@@ -78,6 +78,7 @@ class ExperimentDesigner:
                     "6. All code snippets, API calls, and web requests are realistic and executable.\n"
                     "7. GPU tasks include checks for GPU availability.\n"
                     "8. The experiment considers potential impacts on system performance and reliability.\n"
+                    "9. The response is a valid JSON object without any markdown formatting or code block delimiters.\n"
                 ),
                 "output_format": "JSON"
             }
