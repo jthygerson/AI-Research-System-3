@@ -70,6 +70,8 @@ class ExperimentExecutor:
             elif action == 'use_llm_api':
                 prompt = step.get('prompt')
                 if prompt is None:
+                    prompt = step.get('parameters', {}).get('prompt')
+                if prompt is None:
                     raise ValueError("No prompt provided for 'use_llm_api' action")
                 return self.use_llm_api(prompt)
             elif action == 'web_request':
@@ -116,6 +118,12 @@ class ExperimentExecutor:
                     fixed_step = extract_json_from_text(response_content)
             
             if fixed_step:
+                # Ensure the fixed step has the correct structure
+                if 'action' not in fixed_step:
+                    fixed_step['action'] = step['action']
+                if 'prompt' not in fixed_step and 'parameters' in fixed_step:
+                    if 'prompt' in fixed_step['parameters']:
+                        fixed_step['prompt'] = fixed_step['parameters']['prompt']
                 self.logger.info(f"Step fixed: {fixed_step}")
                 return fixed_step
             else:

@@ -56,14 +56,14 @@ class FeedbackLoop:
                     continue
 
             if not self.validate_refined_plan(refined_plan):
-                self.logger.error("Final refined plan is not valid.")
-                return None
+                self.logger.error("Final refined plan is not valid. Returning the last valid plan.")
+                return experiment_plan  # Return the original plan instead of None
 
             return refined_plan
         except Exception as e:
             self.logger.error(f"Error refining experiment plan: {str(e)}")
             self.logger.error(traceback.format_exc())
-            return None
+            return experiment_plan  # Return the original plan instead of None
 
     def create_refinement_prompt(self, initial_results, current_plan):
         return {
@@ -126,17 +126,35 @@ class FeedbackLoop:
         Validates the structure and content of the refined plan.
         """
         if not isinstance(plan, dict):
+            self.logger.error(f"Invalid plan type: expected dict, got {type(plan)}")
             return False
         
-        if 'experiment_plan' not in plan or not isinstance(plan['experiment_plan'], list):
+        if 'experiment_plan' not in plan:
+            self.logger.error("Missing 'experiment_plan' key in the plan")
             return False
         
-        for step in plan['experiment_plan']:
-            if not isinstance(step, dict) or 'action' not in step:
+        if not isinstance(plan['experiment_plan'], list):
+            self.logger.error(f"Invalid 'experiment_plan' type: expected list, got {type(plan['experiment_plan'])}")
+            return False
+        
+        for i, step in enumerate(plan['experiment_plan'], 1):
+            if not isinstance(step, dict):
+                self.logger.error(f"Step {i} is not a dictionary")
+                return False
+            
+            if 'action' not in step:
+                self.logger.error(f"Step {i} is missing 'action' key")
                 return False
             
             if step['action'] not in ['run_python_code', 'use_llm_api', 'web_request', 'use_gpu']:
+                self.logger.error(f"Step {i} has invalid action: {step['action']}")
                 return False
         
         required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
-        return all(key in plan for key in required_keys)
+        missing_keys = [key for key in required_keys if key not in plan]
+        if missing_keys:
+            self.logger.error(f"Plan is missing required keys: {', '.join(missing_keys)}")
+            return False
+        
+        self.logger.info("Refined plan validation successful")
+        return True
