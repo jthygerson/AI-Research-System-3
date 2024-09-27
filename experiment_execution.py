@@ -55,7 +55,7 @@ class ExperimentExecutor:
                 return self.use_llm_api(step.get('prompt'))
             elif action == 'web_request':
                 try:
-                    return self.make_web_request(step.get('url'), step.get('method', 'GET'))
+                    return self.make_web_request(step.get('url'), step.get('method', 'GET'), retry_without_ssl=True)
                 except requests.exceptions.RequestException as e:
                     new_step = self.experiment_designer.request_plan_adjustment(step, str(e))
                     if new_step:
@@ -152,10 +152,24 @@ class ExperimentExecutor:
             return '\n'.join(line[min_indent:] if line.strip() else '' for line in lines)
         return code
 
-    def make_web_request(self, url, method='GET'):
+    def make_web_request(self, url, method='GET', retry_without_ssl=True):
         # Implement rate limiting and respect robots.txt
-        response = requests.request(method, url)
-        return {'status_code': response.status_code, 'content': response.text}
+        try:
+            response = requests.request(method, url, verify=True)  # First attempt with SSL verification
+            return {'status_code': response.status_code, 'content': response.text}
+        except requests.exceptions.SSLError as e:
+            self.logger.warning(f"SSL Error occurred: {str(e)}")
+            if retry_without_ssl:
+                self.logger.warning("Retrying request without SSL verification. This is not secure and should not be used in production.")
+                warnings.warn("Unverified HTTPS request is being made. This is not secure and should not be used in production.")
+                try:
+                    response = requests.request(method, url, verify=False)  # Retry without SSL verification
+                    return {'status_code': response.status_code, 'content': response.text}
+                except requests.RequestException as retry_error:
+                    self.logger.error(f"Request failed even without SSL verification: {str(retry_error)}")
+                    raise  # Re-raise the exception to be handled by the calling method
+            else:
+                raise  # Re-raise the original SSL exception if retry_without_ssl is False
 
     def use_gpu(self, task):
         # Implement GPU task execution
