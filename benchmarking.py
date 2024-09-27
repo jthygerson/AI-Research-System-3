@@ -4,7 +4,8 @@ from utils.logger import setup_logger
 from system_augmentation import SystemAugmentor
 
 class Benchmarking:
-    def __init__(self):
+    def __init__(self, model_name=None):
+        self.system_augmentor = SystemAugmentor(model_name)
         self.logger = setup_logger('benchmarking', 'logs/benchmarking.log')
         self.system_augmentor = SystemAugmentor()
 

@@ -12,9 +12,9 @@ from utils.metrics import PerformanceMetrics, evaluate_system_performance, gener
 from utils.json_utils import parse_llm_response
 
 class SystemAugmentor:
-    def __init__(self, model_name):
+    def __init__(self, model_name=None):
         initialize_openai()
-        self.model_name = model_name
+        self.model_name = model_name or "gpt-4o"  # Default model if none provided
         self.logger = setup_logger('system_augmentation', 'logs/system_augmentation.log')
         self.previous_performance = None
 
@@ -295,17 +295,26 @@ If no modifications are needed, return an empty array: []
         """
         self.logger.debug(f"Using model: {self.model_name}")
         
-        response = create_completion(
-            self.model_name,
-            messages=[
-                {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
-                {"role": "user", "content": json.dumps(prompt)}
-            ],
-            max_tokens=1000,
-            temperature=0.7,
-        )
-        
-        return response
+        try:
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=3500,
+                temperature=0.7,
+            )
+            
+            # Attempt to parse the response as JSON
+            parsed_response = json.loads(response)
+            return json.dumps(parsed_response)  # Ensure valid JSON string
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse model response as JSON: {e}")
+            return "[]"  # Return empty array as fallback
+        except Exception as e:
+            self.logger.error(f"Error getting model response: {e}")
+            return "[]"  # Return empty array as fallback
 
     def _validate_modifications(self, modifications):
         self.logger.info("Validating proposed modifications...")
