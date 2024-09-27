@@ -224,7 +224,14 @@ class ExperimentExecutor:
                 raise
 
     def use_gpu(self, task):
-        return self.resource_manager.execute_gpu_task(task)
+        if isinstance(task, str):
+            # If task is a string, assume it's Python code and execute it
+            return self.resource_manager.execute_gpu_task(task)
+        elif callable(task):
+            # If task is a callable (function), execute it
+            return self.resource_manager.execute_gpu_task(task)
+        else:
+            return {"error": "Invalid GPU task format. Expected string (code) or callable (function)."}
 
     def map_to_existing_action(self, action):
         normalized_action = action.lower().replace('_', '')
@@ -255,7 +262,7 @@ class UseGPUStrategy(ActionStrategy):
         task = parameters.get('task') or parameters.get('code')
         
         if not task:
-            # Generate a default GPU task
+            executor.logger.warning("No specific GPU task provided. Using a default task.")
             task = """
 import torch
 
@@ -268,5 +275,5 @@ else:
     c = torch.matmul(a, b)
     print("GPU task completed: Matrix multiplication")
 """
-
+        
         return executor.use_gpu(task)
