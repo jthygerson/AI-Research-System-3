@@ -16,7 +16,7 @@ class ExperimentDesigner:
     _instance = None
 
     def __new__(cls, model_name):
-        if cls._instance is None:
+        if cls._instance is None or cls._instance.model_name != model_name:
             cls._instance = super(ExperimentDesigner, cls).__new__(cls)
             cls._instance.model_name = model_name
             cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log', console_level=logging.INFO)
@@ -24,10 +24,8 @@ class ExperimentDesigner:
         return cls._instance
 
     def initialize_openai(self):
-        if not hasattr(self, 'openai_initialized'):
-            self.logger.info("Initializing OpenAI client for ExperimentDesigner")
-            initialize_openai()
-            self.openai_initialized = True
+        self.logger.info("Initializing OpenAI client for ExperimentDesigner")
+        initialize_openai()
 
     def design_experiment(self, idea):
         self.logger.info(f"Designing experiment for idea: {idea}")
@@ -261,20 +259,22 @@ else:
     def adjust_plan(self, step, error_message):
         self.logger.info(f"Requesting plan adjustment for step: {step['action']}")
         try:
-            prompt = f"""
-            The following step in an experiment plan encountered an error:
-            Step: {step}
-            Error: {error_message}
-
-            Please suggest an adjustment to this step to resolve the error. 
-            Provide your response as a valid JSON object with the adjusted step details.
-            """
+            prompt = {
+                "task": "adjust_plan",
+                "step": step,
+                "error_message": error_message,
+                "instructions": (
+                    "The following step in an experiment plan encountered an error:\n"
+                    f"Step: {step}"
+                ),
+                "output_format": "JSON"
+            }
 
             response = create_completion(
                 self.model_name,
                 messages=[
                     {"role": "system", "content": "You are an AI assistant helping to adjust experiment plans."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=500,
                 temperature=0.7

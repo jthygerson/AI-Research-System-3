@@ -13,15 +13,17 @@ from utils.openai_utils import create_completion  # Make sure this import exists
 from utils.config import initialize_openai
 import requests.exceptions
 from experiment_design import ExperimentDesigner  # Add this import at the top of the file
+import warnings
 
 class ExperimentExecutor:
     def __init__(self, model_name, resource_manager):
         self.model_name = model_name
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
-        self.experiment_designer = ExperimentDesigner(model_name)  # Add this line
+        self.experiment_designer = None  # Remove the initialization here
 
     def execute_experiment(self, experiment_plan):
+        self.experiment_designer = ExperimentDesigner(self.model_name)  # Create a new instance here
         self.logger.info("Executing experiment...")
         if not isinstance(experiment_plan, list):
             self.logger.error("Invalid experiment plan format. Expected a list of steps.")
