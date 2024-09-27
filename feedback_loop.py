@@ -43,7 +43,7 @@ class FeedbackLoop:
 
                 parsed_response = self.parse_refinement_response(response)
                 if parsed_response:
-                    new_plan = parsed_response.get('experiment_plan', parsed_response)
+                    new_plan = parsed_response
                     if self.should_continue_refinement(refined_plan, new_plan):
                         refined_plan = new_plan
                         self.logger.info(f"Refined plan (Iteration {iteration+1}):")
@@ -106,6 +106,23 @@ class FeedbackLoop:
         else:
             self.logger.error("Unexpected response format from LLM")
             return None
+        
+        # Ensure the parsed response has the correct structure
+        if parsed_response and isinstance(parsed_response, dict):
+            if 'experiment_plan' not in parsed_response:
+                # If the response is a list of steps, wrap it in the correct structure
+                if isinstance(parsed_response, list) and all(isinstance(step, dict) for step in parsed_response):
+                    parsed_response = {'experiment_plan': parsed_response}
+                else:
+                    # If the response doesn't have the correct structure, create a minimal valid structure
+                    parsed_response = {
+                        'experiment_plan': [],
+                        'objectives': 'Improve experiment based on initial results',
+                        'resources_required': 'No additional resources specified',
+                        'expected_outcomes': 'Improved performance',
+                        'evaluation_criteria': 'Compare results with initial experiment'
+                    }
+                    self.logger.warning("Refined plan didn't have the expected structure. Created a minimal valid structure.")
         
         return parsed_response
 
