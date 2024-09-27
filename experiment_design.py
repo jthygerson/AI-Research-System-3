@@ -245,16 +245,38 @@ else:
         return experiment_plan
 
     def pretty_print_experiment_plan(self, experiment_plan):
+        self.logger.info("=== Experiment Plan Summary ===")
+        self.logger.info(f"Total steps: {len(experiment_plan)}")
+        self.logger.info("============================")
+
         for i, step in enumerate(experiment_plan, 1):
             self.logger.info(f"Step {i}:")
             self.logger.info(f"  Action: {step['action']}")
+            
+            # Add a brief description based on the action type
+            description = self.get_step_description(step)
+            self.logger.info(f"  Description: {description}")
+            
             for key, value in step.items():
                 if key != 'action':
-                    if isinstance(value, str) and len(value) > 100:
-                        self.logger.info(f"  {key.capitalize()}: (truncated) {value[:100]}...")
-                    else:
-                        self.logger.info(f"  {key.capitalize()}: {pformat(value, indent=4)}")
-            self.logger.info("")  # Add a blank line between steps
+                    self.logger.info(f"  {key.capitalize()}:")
+                    self.logger.info(f"{pformat(value, indent=4)}")
+            self.logger.info("----------------------------")  # Separator between steps
+
+        self.logger.info("=== End of Experiment Plan ===")
+
+    def get_step_description(self, step):
+        action = step['action']
+        if action == 'run_python_code':
+            return "Execute Python code to perform a specific task or analysis."
+        elif action == 'use_llm_api':
+            return "Make a request to an LLM API to generate or process text."
+        elif action == 'web_request':
+            return f"Make a {step.get('method', 'GET')} request to {step.get('url', 'a specified URL')} to fetch or send data."
+        elif action == 'use_gpu':
+            return "Perform a GPU-intensive task, such as training or running a neural network model."
+        else:
+            return "Perform a custom action as part of the experiment."
 
     def adjust_plan(self, step, error_message):
         self.logger.info(f"Requesting plan adjustment for step: {step['action']}")
