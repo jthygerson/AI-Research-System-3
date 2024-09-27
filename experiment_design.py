@@ -146,6 +146,10 @@ class ExperimentDesigner:
 
             self.logger.info("Experiment plan:")
             self.pretty_print_experiment_plan(experiment_plan)
+
+            # Automatically register new actions
+            self.register_new_actions(experiment_plan)
+
             return experiment_plan
         except Exception as e:
             self.logger.error(f"Error designing experiment: {str(e)}")
@@ -419,3 +423,31 @@ else:
             "python_version": platform.python_version(),
             "available_libraries": get_installed_packages()
         }
+
+    def register_new_actions(self, experiment_plan):
+        if 'methodology' in experiment_plan and isinstance(experiment_plan['methodology'], list):
+            for step in experiment_plan['methodology']:
+                if isinstance(step, dict) and 'action' in step:
+                    action = step['action']
+                    if action not in self.action_strategies:
+                        self.logger.info(f"Registering new action: {action}")
+                        new_strategy = self.create_dynamic_strategy(step)
+                        self.register_action(action, new_strategy)
+
+    def create_dynamic_strategy(self, step):
+        class DynamicStrategy(ActionStrategy):
+            def execute(self, step, executor):
+                # Generic execution logic
+                if 'code' in step:
+                    return executor.run_python_code(step['code'])
+                elif 'prompt' in step:
+                    return executor.use_llm_api(step['prompt'])
+                elif 'url' in step:
+                    return executor.make_web_request(step['url'], step.get('method', 'GET'))
+                else:
+                    raise ValueError(f"Unsupported parameters for dynamic action: {step}")
+        
+        return DynamicStrategy()
+
+    def register_action(self, action_name, strategy):
+        self.action_strategies[action_name] = strategy

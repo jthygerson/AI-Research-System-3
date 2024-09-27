@@ -12,17 +12,55 @@ import re
 from utils.openai_utils import create_completion, handle_api_error
 from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response, extract_json_from_text
+from abc import ABC, abstractmethod
 
 from experiment_design import ExperimentDesigner
 import warnings
 
+class ActionStrategy(ABC):
+    @abstractmethod
+    def execute(self, step, executor):
+        pass
+
+class InitializeOpenAIStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        return executor.initialize_openai()
+
+class RunPythonCodeStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        code = step.get('code', 'print("No code provided")')
+        return executor.run_python_code(code)
+
+class UseLLMAPIStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        prompt = step.get('prompt') or step.get('parameters', {}).get('prompt')
+        if prompt is None:
+            raise ValueError("No prompt provided for LLM API action")
+        return executor.use_llm_api(prompt)
+
+class WebRequestStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        url = step.get('url')
+        method = step.get('method', 'GET')
+        if url is None:
+            raise ValueError("No URL provided for web request action")
+        return executor.make_web_request(url, method, retry_without_ssl=True)
+
+class UseGPUStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        task = step.get('task')
+        if task is None:
+            raise ValueError("No task provided for GPU action")
+        return executor.use_gpu(task)
+
 class ExperimentExecutor:
-    def __init__(self, model_name, resource_manager):
+    def __init__(self, model_name, resource_manager, action_strategies):
         self.model_name = model_name
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
         self.experiment_designer = None
         initialize_openai()
+        self.action_strategies = action_strategies
 
     def execute_experiment(self, experiment_plan):
         self.experiment_designer = ExperimentDesigner(self.model_name)
@@ -30,18 +68,18 @@ class ExperimentExecutor:
         
         if not isinstance(experiment_plan, dict):
             self.logger.error("Invalid experiment plan format. Expected a dictionary.")
-            return []
+            return None
         
         methodology = experiment_plan.get('methodology', [])
         if not isinstance(methodology, list):
             self.logger.error("Invalid methodology format. Expected a list of steps.")
-            return []
+            return None
         
         results = []
         for step_number, step in enumerate(methodology, 1):
             if not isinstance(step, dict):
                 self.logger.error(f"Invalid step format in step {step_number}. Expected a dictionary.")
-                return results
+                return None
             
             step_result = self.execute_step(step)
             if 'error' in step_result:
@@ -50,10 +88,10 @@ class ExperimentExecutor:
                     step_result = self.execute_step(fixed_step)
                     if 'error' in step_result:
                         self.logger.error(f"Step {step_number} failed even after attempted fix. Stopping experiment.")
-                        return results
+                        return None
                 else:
                     self.logger.error(f"Unable to fix step {step_number}. Stopping experiment.")
-                    return results
+                    return None
             
             results.append({"step": step_number, "action": step['action'], "result": step_result, "status": "success" if 'error' not in step_result else "error"})
         
@@ -62,29 +100,9 @@ class ExperimentExecutor:
     def execute_step(self, step):
         action = step.get('action')
         try:
-            if action == 'initialize_openai':
-                return self.initialize_openai()
-            elif action == 'run_python_code':
-                code = step.get('code', 'print("No code provided")')
-                return self.run_python_code(code)
-            elif action == 'use_llm_api':
-                prompt = step.get('prompt')
-                if prompt is None:
-                    prompt = step.get('parameters', {}).get('prompt')
-                if prompt is None:
-                    raise ValueError("No prompt provided for 'use_llm_api' action")
-                return self.use_llm_api(prompt)
-            elif action == 'web_request':
-                url = step.get('url')
-                method = step.get('method', 'GET')
-                if url is None:
-                    raise ValueError("No URL provided for 'web_request' action")
-                return self.make_web_request(url, method, retry_without_ssl=True)
-            elif action == 'use_gpu':
-                task = step.get('task')
-                if task is None:
-                    raise ValueError("No task provided for 'use_gpu' action")
-                return self.use_gpu(task)
+            strategy = self.action_strategies.get(action)
+            if strategy:
+                return strategy.execute(step, self)
             else:
                 raise ValueError(f"Unknown action: {action}")
         except Exception as e:
@@ -214,3 +232,6 @@ class ExperimentExecutor:
 
     def use_gpu(self, task):
         return self.resource_manager.execute_gpu_task(task)
+
+    def register_action(self, action_name, strategy):
+        self.action_strategies[action_name] = strategy
