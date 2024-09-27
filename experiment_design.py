@@ -16,6 +16,12 @@ import textwrap
 from pprint import pformat
 import traceback
 import logging
+from abc import ABC, abstractmethod
+
+class ActionStrategy(ABC):
+    @abstractmethod
+    def execute(self, step, executor):
+        pass
 
 class ExperimentDesigner:
     _instance = None
@@ -26,6 +32,12 @@ class ExperimentDesigner:
             cls._instance.model_name = model_name
             cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log', console_level=logging.INFO)
             cls._instance.initialize_openai()
+            cls._instance.action_strategies = {
+                'run_python_code': RunPythonCodeStrategy(),
+                'use_llm_api': UseLLMAPIStrategy(),
+                'web_request': WebRequestStrategy(),
+                'use_gpu': UseGPUStrategy(),
+            }
         return cls._instance
 
     def initialize_openai(self):
@@ -451,3 +463,20 @@ else:
 
     def register_action(self, action_name, strategy):
         self.action_strategies[action_name] = strategy
+
+# Define the default strategies
+class RunPythonCodeStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        return executor.run_python_code(step.get('code', ''))
+
+class UseLLMAPIStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        return executor.use_llm_api(step.get('prompt', ''))
+
+class WebRequestStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        return executor.make_web_request(step.get('url', ''), step.get('method', 'GET'))
+
+class UseGPUStrategy(ActionStrategy):
+    def execute(self, step, executor):
+        return executor.use_gpu(step.get('task', ''))
