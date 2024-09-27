@@ -231,7 +231,7 @@ class SystemAugmentor:
             self.logger.info(f"Code modifications suggested: {response}")
 
             # Parse the response
-            parsed_response = parse_llm_response(response)
+            parsed_response = self._parse_modifications(response)
             if not parsed_response:
                 self.logger.warning("Failed to parse model response")
                 return
@@ -310,13 +310,11 @@ If no modifications are needed, return an empty array: []
     def _validate_modifications(self, modifications):
         self.logger.info("Validating proposed modifications...")
         
-        parsed_modifications = self._parse_modifications(modifications)
-        
-        if not parsed_modifications:
+        if not modifications:
             self.logger.warning("No valid modifications found to validate.")
             return False
         
-        for file_path, changes in parsed_modifications:
+        for file_path, changes in modifications:
             try:
                 ast.parse(changes)
             except SyntaxError as e:
@@ -327,40 +325,42 @@ If no modifications are needed, return an empty array: []
 
     def _apply_code_modifications(self, code_modifications):
         self.logger.info("Applying code modifications...")
-        for file_path, changes in self._parse_modifications(code_modifications):
+        for file_path, changes in code_modifications:
             self._modify_file(file_path, changes)
         
         # Run tests after applying modifications
         if not self._run_tests():
             self._revert_changes()
 
-    def _parse_modifications(self, code_modifications):
+    def _parse_modifications(self, response):
+        self.logger.info("Parsing code modifications...")
         parsed_modifications = []
         
-        # If code_modifications is a string, try to parse it as JSON
-        if isinstance(code_modifications, str):
-            try:
-                code_modifications = json.loads(code_modifications)
-            except json.JSONDecodeError:
-                self.logger.error("Failed to parse code_modifications as JSON")
-                return parsed_modifications
-        
-        # If it's a dictionary, wrap it in a list
-        if isinstance(code_modifications, dict):
-            code_modifications = [code_modifications]
-        
-        # If it's a list, process each item
-        if isinstance(code_modifications, list):
-            for modification in code_modifications:
-                if isinstance(modification, dict):
-                    file_path = modification.get('file')
-                    changes = modification.get('code')
-                    if file_path and changes:
-                        parsed_modifications.append((file_path, changes))
-                else:
+        try:
+            # Attempt to parse the entire response as JSON
+            modifications = json.loads(response)
+            
+            if not isinstance(modifications, list):
+                self.logger.error("Expected a JSON array of modifications")
+                return []
+            
+            for modification in modifications:
+                if not isinstance(modification, dict):
                     self.logger.warning(f"Skipping invalid modification: {modification}")
-        else:
-            self.logger.error(f"Unexpected type for code_modifications: {type(code_modifications)}")
+                    continue
+                
+                file_path = modification.get('file')
+                changes = modification.get('code')
+                
+                if not file_path or not changes:
+                    self.logger.warning(f"Skipping modification with missing 'file' or 'code': {modification}")
+                    continue
+                
+                parsed_modifications.append((file_path, changes))
+        
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse response as JSON: {e}")
+            return []
         
         return parsed_modifications
 
