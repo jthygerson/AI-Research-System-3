@@ -25,6 +25,7 @@ from report_writer import ReportWriter
 from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 from utils.safety_checker import SafetyChecker
+from experiment_coder import ExperimentCoder
 
 # Import utility functions
 from utils.logger import setup_logger, ensure_log_file
@@ -179,22 +180,26 @@ def main():
                 main_logger.info("Designing experiment...")
                 experiment_designer = ExperimentDesigner(model_name)
                 experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
-                experiment_plan = parse_and_validate_plan(experiment_plan)
                 if not experiment_plan:
                     main_logger.error("Failed to design experiment. Skipping this experiment run.")
                     continue
 
-                # Safety check for the experiment plan
-                if not safety_checker.check_experiment_plan(experiment_plan['methodology']):
-                    main_logger.warning("Experiment plan failed safety check. Skipping this experiment run.")
+                main_logger.info("Experiment plan designed successfully.")
+
+                # New Step: Experiment Coding
+                main_logger.info("Generating experiment code...")
+                experiment_coder = ExperimentCoder(model_name)
+                experiment_package = experiment_coder.generate_experiment_code(experiment_plan)
+                if not experiment_package:
+                    main_logger.error("Failed to generate experiment code. Skipping this experiment run.")
                     continue
 
-                main_logger.info("Experiment plan designed successfully.")
+                main_logger.info("Experiment code generated successfully.")
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")
-                experiment_executor = ExperimentExecutor(model_name, resource_manager)
-                results = experiment_executor.execute_experiment(experiment_plan)
+                experiment_executor = ExperimentExecutor(resource_manager)
+                results = experiment_executor.execute_experiment(experiment_package)
                 if not results:
                     main_logger.error("Failed to execute experiment. Skipping this experiment run.")
                     continue

@@ -58,41 +58,29 @@ class ExperimentDesigner:
                 "instructions": (
                     "Design a rigorous scientific experiment to test the given idea for improving AI-Research-System-3. "
                     "The experiment should be concrete, executable, and aimed at yielding novel knowledge that can be directly applied to enhance the current codebase. "
-                    "Provide the experiment plan as a valid JSON object with the following structure:\n\n"
-                    "{\n"
-                    "  \"hypothesis\": \"A clear, testable hypothesis based on the idea\",\n"
-                    "  \"variables\": {\n"
-                    "    \"independent\": [\"List of independent variables\"],\n"
-                    "    \"dependent\": [\"List of dependent variables\"],\n"
-                    "    \"controlled\": [\"List of controlled variables\"]\n"
-                    "  },\n"
-                    "  \"methodology\": [\n"
-                    "    {\n"
-                    "      \"step\": \"Step number\",\n"
-                    "      \"action\": \"One of: 'run_python_code', 'use_llm_api', 'web_request', 'use_gpu'\",\n"
-                    "      \"description\": \"Detailed description of the step\",\n"
-                    "      \"parameters\": {\"Relevant parameters for the action\"}\n"
-                    "    }\n"
-                    "  ],\n"
-                    "  \"data_collection\": \"Description of how data will be collected and measured\",\n"
-                    "  \"analysis_plan\": \"Description of how the collected data will be analyzed\",\n"
-                    "  \"expected_outcomes\": \"Anticipated results and their implications for the codebase\",\n"
-                    "  \"potential_challenges\": \"Possible obstacles and mitigation strategies\",\n"
-                    "  \"ethical_considerations\": \"Any ethical issues to be addressed\",\n"
-                    "  \"resources_required\": [\"List of necessary tools, libraries, or data\"]\n"
-                    "}\n\n"
-                    "Ensure that:\n"
-                    "1. The experiment directly addresses the improvement of the AI-Research-System-3 codebase.\n"
-                    "2. The methodology is detailed, reproducible, and follows scientific best practices.\n"
-                    "3. The experiment can be executed within the constraints of the current system.\n"
-                    "4. The analysis plan includes statistical methods where appropriate.\n"
-                    "5. The expected outcomes are specific and quantifiable where possible.\n"
-                    "6. All code snippets, API calls, and web requests are realistic and executable.\n"
-                    "7. GPU tasks include checks for GPU availability.\n"
-                    "8. The experiment considers potential impacts on system performance and reliability.\n"
-                    "9. The response is a valid JSON object without any markdown formatting or code block delimiters.\n"
+                    "Provide the experiment plan as a valid JSON object with the following structure:"
                 ),
-                "output_format": "JSON"
+                "response_format": {
+                    "hypothesis": "A clear, testable hypothesis based on the idea",
+                    "variables": {
+                        "independent": ["List of independent variables"],
+                        "dependent": ["List of dependent variables"],
+                        "controlled": ["List of controlled variables"]
+                    },
+                    "methodology": [
+                        {
+                            "step": "Step number",
+                            "description": "Detailed description of the step",
+                            "expected_outcome": "What this step should achieve"
+                        }
+                    ],
+                    "data_collection": "Description of how data will be collected and measured",
+                    "analysis_plan": "Description of how the collected data will be analyzed",
+                    "expected_outcomes": "Anticipated results and their implications for the codebase",
+                    "potential_challenges": "Possible obstacles and mitigation strategies",
+                    "ethical_considerations": "Any ethical issues to be addressed",
+                    "resources_required": ["List of necessary tools, libraries, or data"]
+                }
             }
 
             response = create_completion(
@@ -105,63 +93,13 @@ class ExperimentDesigner:
                 temperature=0.7,
             )
             
-            self.logger.debug(f"Raw API response: {response}")
-
             experiment_plan = parse_llm_response(response)
             
-            if not experiment_plan:
-                self.logger.error("Failed to parse the API response.")
-                return None
-
-            if not isinstance(experiment_plan, dict):
-                self.logger.error(f"Unexpected experiment plan type: {type(experiment_plan)}")
-                self.logger.debug(f"Raw experiment plan content: {experiment_plan}")
-                return None
-
-            if 'methodology' not in experiment_plan:
-                self.logger.error("Missing 'methodology' in experiment plan.")
-                return None
-
-            if not isinstance(experiment_plan['methodology'], list):
-                self.logger.error(f"Invalid 'methodology' type: {type(experiment_plan['methodology'])}")
-                self.logger.debug(f"Raw methodology content: {experiment_plan['methodology']}")
-                return None
-
-            experiment_plan['methodology'] = self.validate_and_fix_plan(experiment_plan['methodology'])
-
             if not experiment_plan or not isinstance(experiment_plan, dict):
                 self.logger.error("Failed to generate a valid experiment plan.")
                 return None
 
-            # Validate each step in the experiment plan
-            if 'methodology' in experiment_plan and isinstance(experiment_plan['methodology'], list):
-                for step in experiment_plan['methodology']:
-                    if not isinstance(step, dict) or 'action' not in step:
-                        self.logger.error(f"Invalid step in experiment plan: {step}")
-                        return None
-            else:
-                self.logger.error("Invalid or missing 'methodology' in experiment plan.")
-                return None
-
-            # Check for required modules
-            required_modules = ['rpa']  # Add other required modules here
-            for module in required_modules:
-                try:
-                    __import__(module)
-                except ImportError:
-                    self.logger.warning(f"Required module '{module}' is not installed. Please install it before running the experiment.")
-
-            # Fix indentation in generated Python code
-            for step in experiment_plan.get('methodology', []):
-                if step['action'] == 'run_python_code' and 'code' in step:
-                    step['code'] = textwrap.dedent(step['code']).strip()
-
-            self.logger.info("Experiment plan:")
-            self.pretty_print_experiment_plan(experiment_plan)
-
-            # Automatically register new actions
-            self.register_new_actions(experiment_plan)
-
+            self.logger.info("Experiment plan designed successfully.")
             return experiment_plan
         except Exception as e:
             self.logger.error(f"Error designing experiment: {str(e)}")

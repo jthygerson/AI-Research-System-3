@@ -15,8 +15,8 @@ from utils.json_utils import parse_llm_response, extract_json_from_text
 from abc import ABC, abstractmethod
 import importlib
 import inspect
-
-from experiment_design import ExperimentDesigner
+import tempfile
+import sys
 import warnings
 
 class ActionStrategy(ABC):
@@ -25,201 +25,103 @@ class ActionStrategy(ABC):
         pass
 
 class ExperimentExecutor:
-    def __init__(self, model_name, resource_manager):
-        self.model_name = model_name
+    def __init__(self, resource_manager):
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
-        self.experiment_designer = None
-        initialize_openai()
-        self.action_strategies = {}
-        self.load_action_strategies()
+        # Remove the following line as we don't need to initialize OpenAI here
+        # self.initialize_openai()
 
-    def load_action_strategies(self):
-        # Dynamically load all action strategies from a dedicated module
-        strategy_module = importlib.import_module('action_strategies')
-        for name, obj in inspect.getmembers(strategy_module):
-            if inspect.isclass(obj) and issubclass(obj, ActionStrategy) and obj != ActionStrategy:
-                self.register_action(name.lower().replace('strategy', ''), obj())
-
-    def register_action(self, action_name, strategy):
-        self.action_strategies[action_name] = strategy
-        self.logger.info(f"Registered new action: {action_name}")
-
-    def execute_experiment(self, experiment_plan):
-        self.logger.info("Executing experiment...")
+    def execute_experiment(self, experiment_package):
+        self.logger.info("Preparing to execute experiment...")
         
-        if not isinstance(experiment_plan, dict) or 'methodology' not in experiment_plan:
-            self.logger.error("Invalid experiment plan format.")
+        if not isinstance(experiment_package, dict) or 'code' not in experiment_package:
+            self.logger.error("Invalid experiment package format.")
             return None
         
-        methodology = experiment_plan['methodology']
-        results = []
-
-        for step_number, step in enumerate(methodology, 1):
-            if not isinstance(step, dict) or 'action' not in step:
-                self.logger.error(f"Invalid step format in step {step_number}.")
-                continue
-
-            step_result = self.execute_step(step)
-            if step_result.get('error'):
-                self.logger.error(f"Error in step {step_number}: {step_result['error']}")
-                fixed_step = self.attempt_fix_step(step, step_result['error'])
-                if fixed_step:
-                    step_result = self.execute_step(fixed_step)
-                    if step_result.get('error'):
-                        mapped_action = self.map_to_existing_action(fixed_step['action'])
-                        if mapped_action:
-                            fixed_step['action'] = mapped_action
-                            step_result = self.execute_step(fixed_step)
-                        if step_result.get('error'):
-                            self.logger.error(f"Step {step_number} failed even after attempted fix and mapping. Error: {step_result['error']}")
-                            continue
-                else:
-                    self.logger.error(f"Unable to fix step {step_number}. Skipping this step.")
-                    continue
-
-            results.append({
-                "step": step_number,
-                "action": step['action'],
-                "result": step_result,
-                "status": "success" if not step_result.get('error') else "error"
-            })
-
+        code = experiment_package['code']
+        requirements = experiment_package.get('requirements', [])
+        instructions = experiment_package.get('instructions', [])
+        
+        # Set up the execution environment
+        self.setup_environment(requirements)
+        
+        # Execute the experiment code
+        results = self.run_experiment_code(code)
+        
         return results
 
-    def execute_step(self, step):
-        action = step.get('action')
+    def setup_environment(self, requirements):
+        self.logger.info("Setting up execution environment...")
+        for req in requirements:
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+                self.logger.info(f"Installed requirement: {req}")
+            except subprocess.CalledProcessError:
+                self.logger.error(f"Failed to install requirement: {req}")
+
+    def run_experiment_code(self, code):
+        self.logger.info("Executing experiment code...")
         try:
-            # Convert action name to lowercase and remove underscores
-            normalized_action = action.lower().replace('_', '')
-            strategy = self.action_strategies.get(normalized_action)
-            if strategy:
-                return strategy.execute(step, self)
+            # Create a temporary file to store the experiment code
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
+
+            # Execute the temporary file
+            result = subprocess.run([sys.executable, temp_file_path], capture_output=True, text=True)
+            
+            # Clean up the temporary file
+            os.unlink(temp_file_path)
+
+            if result.returncode == 0:
+                self.logger.info("Experiment executed successfully.")
+                return {'stdout': result.stdout, 'stderr': result.stderr}
             else:
-                return {"error": f"Unknown action: {action}"}
+                self.logger.error(f"Experiment execution failed with return code {result.returncode}")
+                return {'error': result.stderr}
         except Exception as e:
-            self.logger.error(f"Error executing step with action '{action}': {str(e)}")
-            return {"error": str(e)}
+            self.logger.error(f"Error executing experiment: {str(e)}")
+            return {'error': str(e)}
 
-    def attempt_fix_step(self, step, error):
-        self.logger.info(f"Attempting to fix step: {step['action']}")
-        prompt = f"Fix the following experiment step that produced an error:\nStep: {json.dumps(step)}\nError: {error}\nProvide a fixed version of the step as a JSON object. Ensure the 'action' field matches one of these valid actions: {', '.join(self.action_strategies.keys())}."
+    # Remove the initialize_openai method as it's not needed in this class anymore
 
+    # The use_llm_api method can be simplified or removed if it's not directly used in execution
+    # If you want to keep it for potential future use, you can simplify it:
+    def use_llm_api(self, prompt, llm_endpoint=None, payload=None):
         try:
+            if not payload:
+                payload = {
+                    "task": "experiment_execution_assistance",
+                    "prompt": prompt,
+                    "instructions": "Provide assistance for executing the experiment. Respond with a JSON object containing your analysis and suggestions.",
+                    "response_format": {
+                        "analysis": "Your analysis of the situation",
+                        "suggestions": ["List of suggestions for proceeding with the experiment"],
+                        "potential_issues": ["List of potential issues to be aware of"]
+                    }
+                }
+
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI assistant specialized in fixing errors in experiment steps."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": "You are an AI assistant helping with experiment execution. Always respond with valid JSON."},
+                    {"role": "user", "content": json.dumps(payload)}
                 ],
-                max_tokens=3500,
-                temperature=0.7,
+                max_tokens=3500
             )
-            
-            fixed_step = None
-            if isinstance(response, str):
-                fixed_step = parse_llm_response(response)
-                if fixed_step is None:
-                    fixed_step = extract_json_from_text(response)
-            elif hasattr(response, 'choices') and response.choices:
-                response_content = response.choices[0].message.content
-                fixed_step = parse_llm_response(response_content)
-                if fixed_step is None:
-                    fixed_step = extract_json_from_text(response_content)
-            
-            if fixed_step:
-                # Ensure the fixed step has the correct structure and action name
-                if 'action' not in fixed_step or fixed_step['action'].lower().replace('_', '') not in self.action_strategies:
-                    self.logger.warning(f"Invalid action in fixed step. Defaulting to original action: {step['action']}")
-                    fixed_step['action'] = step['action']
-                
-                # Ensure there are no duplicate 'code' keys in parameters
-                if 'parameters' in fixed_step and 'code' in fixed_step['parameters']:
-                    if isinstance(fixed_step['parameters']['code'], list):
-                        fixed_step['parameters']['code'] = '\n'.join(filter(None, fixed_step['parameters']['code']))
-                    elif not fixed_step['parameters']['code']:
-                        del fixed_step['parameters']['code']
-                
-                self.logger.info(f"Step fixed: {fixed_step}")
-                return fixed_step
+            parsed_response = parse_llm_response(response)
+            if parsed_response and isinstance(parsed_response, dict):
+                return {"response": parsed_response}
             else:
-                self.logger.error("Failed to parse LLM response for step fix")
-                return None
-        except Exception as e:
-            self.logger.error(f"Error in attempt_fix_step: {str(e)}")
-            return None
-
-    def initialize_openai(self):
-        try:
-            initialize_openai()
-            return {"status": "OpenAI initialized successfully"}
-        except Exception as e:
-            return {"error": f"Failed to initialize OpenAI: {str(e)}"}
-
-    def run_python_code(self, code):
-        result = subprocess.run(['python', '-c', code], capture_output=True, text=True)
-        return {'stdout': result.stdout, 'stderr': result.stderr}
-
-    def use_llm_api(self, prompt, endpoint=None, payload=None):
-        try:
-            # If an endpoint is provided, use it to call a specific API
-            if endpoint:
-                # Implement the logic to call the specific endpoint with the payload
-                # This is a placeholder and should be replaced with actual API call logic
-                response = f"API call to {endpoint} with payload {payload}"
-            else:
-                # Use the default OpenAI completion if no specific endpoint is provided
-                response = create_completion(
-                    self.model_name,
-                    messages=[
-                        {"role": "system", "content": "You are an AI assistant helping with experiments."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=3500
-                )
-            
-            # Process the response as before
-            if isinstance(response, str):
-                return {"raw_response": response}
-            elif hasattr(response, 'choices') and response.choices:
-                response_content = response.choices[0].message.content
-                cleaned_response = self.clean_llm_response(response_content)
-                parsed_response = parse_llm_response(cleaned_response)
-                
-                if parsed_response is None:
-                    parsed_response = extract_json_from_text(cleaned_response)
-                
-                if parsed_response:
-                    return self.process_parsed_response(parsed_response)
-                else:
-                    self.logger.warning(f"Failed to parse LLM response: {cleaned_response}")
-                    return {"raw_response": cleaned_response}
-            else:
-                self.logger.error(f"Unexpected response format from LLM: {response}")
-                return {"error": "Unexpected response format from LLM"}
+                return {"error": "Invalid response format from LLM"}
         except Exception as e:
             self.logger.error(f"Error in use_llm_api: {str(e)}")
-            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return {"error": str(e)}
 
-    def clean_llm_response(self, response):
-        cleaned = re.sub(r'```(?:json)?\s*|\s*```', '', response.strip())
-        return cleaned.strip()
+    # Remove or simplify other methods that are no longer directly used in execution:
+    # clean_llm_response, process_parsed_response, format_code, map_to_existing_action
 
-    def process_parsed_response(self, parsed_response):
-        if isinstance(parsed_response, dict):
-            if 'code' in parsed_response:
-                parsed_response['code'] = self.format_code(parsed_response['code'])
-            return parsed_response
-        else:
-            return {"parsed_response": parsed_response}
-
-    def format_code(self, code):
-        lines = code.split('\n')
-        if lines:
-            min_indent = min(len(line) - len(line.lstrip()) for line in lines if line.strip())
-            return '\n'.join(line[min_indent:] if line.strip() else '' for line in lines)
-        return code
+    # Keep the make_web_request and use_gpu methods as they might be useful for experiment execution
 
     def make_web_request(self, url, method='GET', retry_without_ssl=True):
         try:
@@ -248,13 +150,6 @@ class ExperimentExecutor:
             return self.resource_manager.execute_gpu_task(task)
         else:
             return {"error": "Invalid GPU task format. Expected string (code) or callable (function)."}
-
-    def map_to_existing_action(self, action):
-        normalized_action = action.lower().replace('_', '')
-        for existing_action in self.action_strategies.keys():
-            if normalized_action in existing_action:
-                return existing_action
-        return None
 
 class UseLLMAPIStrategy(ActionStrategy):
     def execute(self, step, executor):
