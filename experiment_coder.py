@@ -11,8 +11,9 @@ import re
 import sys
 
 class ExperimentCoder:
-    def __init__(self, model_name):
+    def __init__(self, model_name, max_tokens):
         self.model_name = model_name
+        self.max_tokens = max_tokens
         self.logger = setup_logger('experiment_coder', 'logs/experiment_coder.log')
         initialize_openai()
         self.executor = ExperimentExecutor(ResourceManager(), model_name)
@@ -36,7 +37,7 @@ class ExperimentCoder:
                     {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=4096,
+                max_tokens=self.max_tokens,
                 temperature=0.7,
             )
             
@@ -148,7 +149,7 @@ class ExperimentCoder:
                     {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(completion_prompt)}
                 ],
-                max_tokens=4096,
+                max_tokens=self.max_tokens,
                 temperature=0.7,
             )
             
