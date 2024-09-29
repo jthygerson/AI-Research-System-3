@@ -63,12 +63,19 @@ class ExperimentDesigner:
                 max_tokens=self.max_tokens
             )
             
-            # Check if the response is already a dictionary
-            if isinstance(response, dict):
-                experiment_plan = response
-            else:
-                # If it's a string, try to parse it as JSON
-                experiment_plan = json.loads(response)
+            self.logger.debug(f"Raw LLM response: {response}")
+            
+            # Try to parse the response as JSON
+            experiment_plan = parse_llm_response(response)
+            
+            if not experiment_plan:
+                # If parsing fails, try to extract JSON from the text
+                json_str = extract_json_from_text(response)
+                if json_str:
+                    experiment_plan = json.loads(json_str)
+                else:
+                    self.logger.error("No valid JSON found in the response")
+                    return []
             
             if not experiment_plan.get('experiment_plan'):
                 self.logger.error("No experiment plan found in the response")
@@ -76,14 +83,13 @@ class ExperimentDesigner:
             
             return experiment_plan['experiment_plan']
         
-        except json.JSONDecodeError:
-            self.logger.error(f"Failed to parse response as JSON: {response}")
-            # If JSON parsing fails, check if the response is already the experiment plan
-            if isinstance(response, list) and all(isinstance(item, dict) for item in response):
-                return response
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse response as JSON: {e}")
+            self.logger.debug(f"Problematic JSON string: {response}")
             return []
         except Exception as e:
             self.logger.error(f"Error designing experiment: {e}")
+            self.logger.debug(traceback.format_exc())
             return []
 
     def _generate_design_prompt(self, idea):
