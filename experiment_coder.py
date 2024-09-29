@@ -4,9 +4,10 @@ import json
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
-from utils.json_utils import parse_llm_response  # Add this import at the top of the file
+from utils.json_utils import parse_llm_response, fix_json_string  # Add this import at the top of the file
 from experiment_execution import ExperimentExecutor
 from utils.resource_manager import ResourceManager
+import re
 
 class ExperimentCoder:
     def __init__(self, model_name):
@@ -31,13 +32,8 @@ class ExperimentCoder:
                 "5. Include error handling and logging where appropriate.\n"
                 "6. Add comments to explain complex parts of the code.\n"
                 "7. Ensure the code is compatible with Python 3.7+.\n"
-                "Provide the complete Python code for this experiment as a JSON response."
-            ),
-            "response_format": {
-                "code": "The complete Python code for the experiment",
-                "requirements": ["List of required libraries"],
-                "execution_instructions": ["List of steps to execute the experiment"]
-            }
+                "Provide the complete Python code for this experiment."
+            )
         }
         
         try:
@@ -54,20 +50,20 @@ class ExperimentCoder:
             # Log the full response from the LLM
             self.logger.debug(f"Full LLM response:\n{response}")
             
-            experiment_package = parse_llm_response(response)
+            # Extract the code from the response
+            code = self.extract_code_from_response(response)
             
-            if experiment_package and isinstance(experiment_package, dict) and 'code' in experiment_package:
+            if code:
                 # Check if the code is complete
-                if experiment_package['code'].strip().endswith(('```', '"""')):
+                if code.strip().endswith(('```', '"""')):
                     self.logger.info("Experiment code generated successfully.")
-                    return experiment_package
+                    return {"code": code, "requirements": self.extract_requirements(code)}
                 else:
                     self.logger.warning("Generated code appears to be truncated. Attempting to complete it.")
-                    complete_code = self.complete_truncated_code(experiment_package['code'])
+                    complete_code = self.complete_truncated_code(code)
                     if complete_code:
-                        experiment_package['code'] = complete_code
                         self.logger.info("Experiment code completed successfully.")
-                        return experiment_package
+                        return {"code": complete_code, "requirements": self.extract_requirements(complete_code)}
                     else:
                         self.logger.error("Failed to complete truncated code.")
                         return None
@@ -134,7 +130,7 @@ class ExperimentCoder:
         completion_prompt = {
             "task": "complete_truncated_code",
             "truncated_code": truncated_code,
-            "instructions": "Complete the following truncated Python code. Ensure that all functions and the main block are properly closed."
+            "instructions": "Complete the following truncated Python code. Ensure that all functions and the main block are properly closed. Return only the completed code without any additional text or formatting."
         }
         
         try:
@@ -148,11 +144,30 @@ class ExperimentCoder:
                 temperature=0.7,
             )
             
-            completed_code = parse_llm_response(response)
-            if completed_code and isinstance(completed_code, str):
+            completed_code = self.extract_code_from_response(response)
+            if completed_code:
                 return completed_code
             else:
                 return None
         except Exception as e:
             self.logger.error(f"Error completing truncated code: {str(e)}")
+            return None
+
+    def extract_code_from_response(self, response):
+        if isinstance(response, str):
+            # Try to extract code from markdown code blocks
+            code_blocks = re.findall(r'```python\n(.*?)```', response, re.DOTALL)
+            if code_blocks:
+                return '\n'.join(code_blocks)
+            # If no code blocks found, return the entire response
+            return response.strip()
+        elif hasattr(response, 'choices') and response.choices:
+            content = response.choices[0].message.content.strip()
+            # Try to extract code from markdown code blocks
+            code_blocks = re.findall(r'```python\n(.*?)```', content, re.DOTALL)
+            if code_blocks:
+                return '\n'.join(code_blocks)
+            # If no code blocks found, return the entire content
+            return content
+        else:
             return None
