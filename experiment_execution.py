@@ -83,8 +83,9 @@ class ExperimentExecutor:
             # Install requirements in the virtual environment
             for req in requirements:
                 try:
-                    subprocess.check_call([python_path, "-m", "pip", "install", req])
-                    self.logger.info(f"Installed requirement: {req}")
+                    if req.lower() != 'random':  # Skip 'random' as it's a built-in module
+                        subprocess.check_call([python_path, "-m", "pip", "install", req])
+                        self.logger.info(f"Installed requirement: {req}")
                 except subprocess.CalledProcessError:
                     self.logger.error(f"Failed to install requirement: {req}")
             
@@ -227,7 +228,7 @@ class ExperimentExecutor:
 
     def install_requirement(self, requirement):
         # Check if the requirement is a built-in module
-        if requirement in sys.builtin_module_names or (hasattr(sys, 'stdlib_module_names') and requirement in sys.stdlib_module_names):
+        if requirement in sys.builtin_module_names or requirement in sys.modules:
             self.logger.info(f"Skipping built-in module: {requirement}")
             return
 
@@ -238,8 +239,12 @@ class ExperimentExecutor:
         except ImportError:
             # If import fails, try to install the package
             self.logger.info(f"Installing requirement: {requirement}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", requirement])
-            self.logger.info(f"Successfully installed: {requirement}")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", requirement])
+                self.logger.info(f"Successfully installed: {requirement}")
+            except subprocess.CalledProcessError as e:
+                self.logger.error(f"Failed to install requirement: {requirement}. Error: {str(e)}")
+                raise
 
         # Check if the installed package has any post-installation steps
         self.run_post_install_steps(requirement)
