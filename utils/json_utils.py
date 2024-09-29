@@ -1,8 +1,11 @@
 import json
 import re
 from utils.logger import setup_logger
+import logging
+from logging.handlers import RotatingFileHandler
 
-logger = setup_logger('json_utils', 'logs/json_utils.log')
+# Update the logger setup
+logger = setup_logger('json_utils', 'logs/json_utils.log', log_rotation=True)
 
 def parse_llm_response(response):
     if isinstance(response, str):
