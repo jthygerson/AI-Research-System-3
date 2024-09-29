@@ -66,6 +66,46 @@ class FeedbackLoop:
             self.logger.error(traceback.format_exc())
             return experiment_plan  # Return the original plan instead of None
 
+    def validate_refined_plan(self, plan):
+        """
+        Validates the structure and content of the refined plan.
+        """
+        if not isinstance(plan, dict):
+            self.logger.error(f"Invalid plan type: expected dict, got {type(plan)}")
+            return False
+        
+        self.logger.debug(f"Plan keys: {', '.join(plan.keys())}")
+        
+        if 'experiment_plan' not in plan:
+            self.logger.error("Missing 'experiment_plan' key in the plan")
+            return False
+        
+        if not isinstance(plan['experiment_plan'], list):
+            self.logger.error(f"Invalid 'experiment_plan' type: expected list, got {type(plan['experiment_plan'])}")
+            return False
+        
+        for i, step in enumerate(plan['experiment_plan'], 1):
+            if not isinstance(step, dict):
+                self.logger.error(f"Step {i} is not a dictionary")
+                return False
+            
+            if 'action' not in step:
+                self.logger.error(f"Step {i} is missing 'action' key")
+                return False
+            
+            if step['action'] not in ['run_python_code', 'use_llm_api', 'web_request', 'use_gpu']:
+                self.logger.error(f"Step {i} has invalid action: {step['action']}")
+                return False
+        
+        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
+        missing_keys = [key for key in required_keys if key not in plan]
+        if missing_keys:
+            self.logger.error(f"Plan is missing required keys: {', '.join(missing_keys)}")
+            return False
+        
+        self.logger.info("Refined plan validation successful")
+        return True
+
     def create_refinement_prompt(self, initial_results, current_plan):
         return {
             "task": "refine_experiment",
@@ -157,43 +197,3 @@ class FeedbackLoop:
         # Implement logic to calculate the difference between two plans
         # This is a placeholder and should be implemented based on your criteria
         return 0.2  # Placeholder value
-
-    def validate_refined_plan(self, plan):
-        """
-        Validates the structure and content of the refined plan.
-        """
-        if not isinstance(plan, dict):
-            self.logger.error(f"Invalid plan type: expected dict, got {type(plan)}")
-            return False
-        
-        self.logger.debug(f"Plan keys: {', '.join(plan.keys())}")
-        
-        if 'experiment_plan' not in plan:
-            self.logger.error("Missing 'experiment_plan' key in the plan")
-            return False
-        
-        if not isinstance(plan['experiment_plan'], list):
-            self.logger.error(f"Invalid 'experiment_plan' type: expected list, got {type(plan['experiment_plan'])}")
-            return False
-        
-        for i, step in enumerate(plan['experiment_plan'], 1):
-            if not isinstance(step, dict):
-                self.logger.error(f"Step {i} is not a dictionary")
-                return False
-            
-            if 'action' not in step:
-                self.logger.error(f"Step {i} is missing 'action' key")
-                return False
-            
-            if step['action'] not in ['run_python_code', 'use_llm_api', 'web_request', 'use_gpu']:
-                self.logger.error(f"Step {i} has invalid action: {step['action']}")
-                return False
-        
-        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
-        missing_keys = [key for key in required_keys if key not in plan]
-        if missing_keys:
-            self.logger.error(f"Plan is missing required keys: {', '.join(missing_keys)}")
-            return False
-        
-        self.logger.info("Refined plan validation successful")
-        return True

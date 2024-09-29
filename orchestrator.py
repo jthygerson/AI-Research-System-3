@@ -69,17 +69,22 @@ def parse_and_validate_plan(plan):
         if isinstance(plan, str):
             plan = json.loads(plan)
         if not isinstance(plan, dict):
+            main_logger.error("Plan is not a dictionary")
             return None
-        required_keys = ['hypothesis', 'variables', 'methodology', 'data_collection', 'analysis_plan']
+        required_keys = ['experiment_plan', 'objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
         if not all(key in plan for key in required_keys):
+            main_logger.error(f"Plan is missing required keys: {[key for key in required_keys if key not in plan]}")
             return None
-        if not isinstance(plan['methodology'], list):
+        if not isinstance(plan['experiment_plan'], list):
+            main_logger.error("experiment_plan is not a list")
             return None
-        for step in plan['methodology']:
+        for step in plan['experiment_plan']:
             if not isinstance(step, dict) or 'action' not in step:
+                main_logger.error(f"Invalid step in experiment_plan: {step}")
                 return None
         return plan
     except json.JSONDecodeError:
+        main_logger.error("Failed to parse plan as JSON")
         return None
 
 def main():
@@ -224,6 +229,7 @@ def main():
                     continue
 
                 main_logger.info("Experiment plan refined successfully.")
+                main_logger.debug(f"Refined plan: {json.dumps(refined_plan, indent=2)}")
 
                 # Step 6: Refined Experiment Execution
                 main_logger.info("Executing refined experiment...")
