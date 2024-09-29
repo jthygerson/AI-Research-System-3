@@ -11,8 +11,9 @@ import logging
 from pprint import pformat
 
 class FeedbackLoop:
-    def __init__(self, model_name):
+    def __init__(self, model_name, max_tokens=4000):
         self.model_name = model_name
+        self.max_tokens = max_tokens
         self.max_iterations = 5  # Example value
         self.logger = setup_logger('feedback_loop', 'logs/feedback_loop.log', console_level=logging.INFO)
         initialize_openai()
@@ -35,7 +36,7 @@ class FeedbackLoop:
                         {"role": "system", "content": "You are an AI research assistant specializing in experiment refinement."},
                         {"role": "user", "content": json.dumps(prompt)}
                     ],
-                    max_tokens=3500,
+                    max_tokens=self.max_tokens,
                     temperature=0.7,
                 )
                 

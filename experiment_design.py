@@ -26,10 +26,11 @@ class ActionStrategy(ABC):
 class ExperimentDesigner:
     _instance = None
 
-    def __new__(cls, model_name):
+    def __new__(cls, model_name, max_tokens=4000):
         if cls._instance is None or cls._instance.model_name != model_name:
             cls._instance = super(ExperimentDesigner, cls).__new__(cls)
             cls._instance.model_name = model_name
+            cls._instance.max_tokens = max_tokens
             cls._instance.logger = setup_logger('experiment_design', 'logs/experiment_design.log', console_level=logging.INFO)
             cls._instance.initialize_openai()
             cls._instance.action_strategies = {
@@ -89,7 +90,7 @@ class ExperimentDesigner:
                     {"role": "system", "content": "You are a world-class computer scientist specializing in AI model and system improvement. Always respond with valid JSON exactly as specified in the instructions."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3500,
+                max_tokens=self.max_tokens,
                 temperature=0.7,
             )
             

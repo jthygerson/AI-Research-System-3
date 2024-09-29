@@ -10,8 +10,9 @@ import traceback
 import logging
 
 class ErrorFixer:
-    def __init__(self, model_name):
+    def __init__(self, model_name, max_tokens=4000):
         self.model_name = model_name
+        self.max_tokens = max_tokens
         self.logger = setup_logger('error_fixing', 'logs/error_fixing.log', console_level=logging.INFO)
 
     def fix_errors(self, errors_warnings):
@@ -33,7 +34,7 @@ class ErrorFixer:
                     {"role": "system", "content": "You are a code fixer and system optimizer."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3500,
+                max_tokens=self.max_tokens,
                 temperature=0.7,
             )
             

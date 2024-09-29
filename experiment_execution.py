@@ -33,13 +33,12 @@ class ExperimentExecutor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, resource_manager, model_name):
-        if self._initialized:
-            return
+    def __init__(self, resource_manager, model_name, max_tokens=4000):
         self.resource_manager = resource_manager
-        self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
         self.model_name = model_name
-        self._initialized = True
+        self.max_tokens = max_tokens
+        self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log', console_level=logging.INFO)
+        initialize_openai()
 
     def execute_experiment(self, experiment_package):
         self.logger.info("Preparing to execute experiment...")
@@ -107,7 +106,7 @@ class ExperimentExecutor:
                     {"role": "system", "content": "You are an AI code reviewer and debugger."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3500,
+                max_tokens=self.max_tokens,
                 temperature=0.7,
             )
             

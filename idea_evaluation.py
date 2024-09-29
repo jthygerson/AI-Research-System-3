@@ -15,22 +15,12 @@ import openai
 from logging import getLogger
 
 class IdeaEvaluator:
-    _instance = None
-
-    def __new__(cls, model_name):
-        if cls._instance is None:
-            cls._instance = super(IdeaEvaluator, cls).__new__(cls)
-            cls._instance.model_name = model_name
-            cls._instance.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log')
-            cls._instance.debug_logger = setup_logger('debug', 'logs/detailed_debug.log')
-            cls._instance.initialize_openai()
-        return cls._instance
-
-    def initialize_openai(self):
-        if not hasattr(self, 'openai_initialized'):
-            self.logger.info("Initializing OpenAI client for IdeaEvaluator")
-            initialize_openai()
-            self.openai_initialized = True
+    def __init__(self, model_name, max_tokens=4000):
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.logger = setup_logger('idea_evaluation', 'logs/idea_evaluation.log', console_level=logging.INFO)
+        self.debug_logger = setup_logger('idea_evaluation_debug', 'logs/idea_evaluation_debug.log', level=logging.DEBUG)
+        initialize_openai()
 
     def evaluate_ideas(self, ideas):
         self.debug_logger.debug(f"Starting evaluation of {len(ideas)} ideas")
@@ -71,10 +61,10 @@ class IdeaEvaluator:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI research assistant specializing in evaluating research ideas."},
+                    {"role": "system", "content": "You are an AI assistant specialized in evaluating research ideas."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3000,
+                max_tokens=self.max_tokens,
                 temperature=0.7
             )
             

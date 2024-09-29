@@ -5,8 +5,7 @@ import logging
 from openai import OpenAI
 
 # Setup a logger for config
-logger = logging.getLogger('config')
-logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
+logger = setup_logger('config', 'logs/config.log', level=logging.DEBUG)
 
 def initialize_openai():
     """

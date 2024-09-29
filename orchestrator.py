@@ -83,6 +83,7 @@ def main():
     parser.add_argument('--model_name', type=str, required=True, help='Name of the OpenAI model to use')
     parser.add_argument('--num_ideas', type=int, default=20, help='Maximum number of ideas to generate')
     parser.add_argument('--num_experiments', type=int, required=True, help='Number of experiment runs')
+    parser.add_argument('--max_tokens', type=int, default=4000, help='Maximum number of tokens for API calls')
     args = parser.parse_args()
 
     # Define supported models for validation
@@ -134,8 +135,13 @@ def main():
                 current_run_ideas = []
 
                 # Create new instances for each run to ensure fresh state
-                idea_generator = IdeaGenerator(model_name, args.num_ideas)
-                idea_evaluator = IdeaEvaluator(model_name)
+                idea_generator = IdeaGenerator(args.model_name, args.num_ideas, args.max_tokens)
+                idea_evaluator = IdeaEvaluator(args.model_name, args.max_tokens)
+                experiment_designer = ExperimentDesigner(args.model_name, args.max_tokens)
+                experiment_executor = ExperimentExecutor(resource_manager, args.model_name, args.max_tokens)
+                feedback_loop = FeedbackLoop(args.model_name, args.max_tokens)
+                system_augmentor = SystemAugmentor(args.model_name, args.max_tokens)
+                error_fixer = ErrorFixer(args.model_name, args.max_tokens)
 
                 # Generate new ideas for this run
                 main_logger.info("Generating ideas for this experiment run...")
@@ -178,7 +184,6 @@ def main():
 
                 # Step 3: Experiment Design
                 main_logger.info("Designing experiment...")
-                experiment_designer = ExperimentDesigner(model_name)
                 experiment_plan = experiment_designer.design_experiment(best_idea['idea'])
                 if not experiment_plan:
                     main_logger.error("Failed to design experiment. Skipping this experiment run.")
@@ -188,7 +193,7 @@ def main():
 
                 # New Step: Experiment Coding
                 main_logger.info("Generating experiment code...")
-                experiment_coder = ExperimentCoder(model_name)
+                experiment_coder = ExperimentCoder(args.model_name, args.max_tokens)
                 experiment_package = experiment_coder.generate_experiment_code(experiment_plan)
                 if not experiment_package:
                     main_logger.error("Failed to generate experiment code. Skipping this experiment run.")
@@ -198,7 +203,6 @@ def main():
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")
-                experiment_executor = ExperimentExecutor(resource_manager, model_name)
                 results = experiment_executor.execute_experiment(experiment_package)
                 if not results:
                     main_logger.error("Failed to execute experiment. Skipping this experiment run.")
@@ -207,7 +211,6 @@ def main():
 
                 # Step 5: Feedback Loop
                 main_logger.info("Refining experiment plan...")
-                feedback_loop = FeedbackLoop(model_name)
                 refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
                 refined_plan = parse_and_validate_plan(refined_plan)
                 if not refined_plan:
@@ -226,7 +229,6 @@ def main():
 
                 # Step 7: System Augmentation
                 main_logger.info("Augmenting system...")
-                system_augmentor = SystemAugmentor(model_name)
                 system_augmentor.augment_system(final_results)
                 main_logger.info("System augmentation completed.")
 
@@ -259,14 +261,13 @@ def main():
 
                 # Step 10: Log Error Checking
                 main_logger.info("Checking logs for errors and warnings...")
-                log_error_checker = LogErrorChecker(model_name)
+                log_error_checker = LogErrorChecker(args.model_name, args.max_tokens)
                 errors_warnings = log_error_checker.check_logs('logs/main.log')
                 main_logger.info(f"Log Analysis: {len(errors_warnings)} issues found")
 
                 # Step 11: Error Fixing
                 if errors_warnings:
                     main_logger.info("Fixing errors...")
-                    error_fixer = ErrorFixer(model_name)
                     error_fixer.fix_errors(errors_warnings)
                     main_logger.info("Error fixing completed.")
                 else:

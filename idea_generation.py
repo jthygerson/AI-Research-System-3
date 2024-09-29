@@ -16,10 +16,11 @@ import traceback
 logger = getLogger(__name__)
 
 class IdeaGenerator:
-    def __init__(self, model_name, num_ideas):
+    def __init__(self, model_name, num_ideas, max_tokens=4000):
         # Initialize the IdeaGenerator with the specified model and number of ideas to generate
         self.model_name = model_name
         self.num_ideas = num_ideas
+        self.max_tokens = max_tokens
         
         # Remove redundant logger initialization
         # self.logger = setup_logger('idea_generation', 'logs/idea_generation.log', console_level=logging.DEBUG)
@@ -70,7 +71,7 @@ class IdeaGenerator:
                     {"role": "system", "content": "You are an AI research assistant specializing in generating innovative ideas for AI system improvement."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3000,
+                max_tokens=self.max_tokens,
                 temperature=0.7
             )
             

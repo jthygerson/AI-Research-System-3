@@ -148,7 +148,7 @@ class ExperimentCoder:
                     {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(completion_prompt)}
                 ],
-                max_tokens=2048,
+                max_tokens=4096,
                 temperature=0.7,
             )
             

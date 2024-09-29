@@ -14,9 +14,10 @@ from utils.metrics import PerformanceMetrics, evaluate_system_performance, gener
 from utils.json_utils import parse_llm_response
 
 class SystemAugmentor:
-    def __init__(self, model_name=None):
+    def __init__(self, model_name=None, max_tokens=4000):
         initialize_openai()
         self.model_name = model_name or "gpt-4"  # Default model if none provided
+        self.max_tokens = max_tokens
         self.logger = setup_logger('system_augmentation', 'logs/system_augmentation.log')
         self.previous_performance = None
         self.max_retries = 3
@@ -226,11 +227,19 @@ class SystemAugmentor:
         else:
             return False
 
-    def augment_system(self, experiment_results):
+    def augment_system(self, final_results):
         self.logger.info("Augmenting system based on experiment results...")
         try:
-            prompt = self._generate_augmentation_prompt(experiment_results)
-            response = self._get_model_response(prompt)
+            prompt = self._generate_augmentation_prompt(final_results)
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=self.max_tokens,
+                temperature=0.7,
+            )
             
             self.logger.info(f"Received model response. Length: {len(response)}")
             self.logger.debug(f"Model response content: {response[:500]}...")  # Log first 500 characters

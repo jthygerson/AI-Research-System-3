@@ -3,7 +3,7 @@ import re
 
 class SafetyChecker:
     def __init__(self):
-        self.logger = logging.getLogger('safety_checker')
+        self.logger = setup_logger('safety_checker', 'logs/safety_checker.log', level=logging.DEBUG)
         self.logger.setLevel(logging.DEBUG)
         self.logger.warning("Safety checks are currently disabled!")
 

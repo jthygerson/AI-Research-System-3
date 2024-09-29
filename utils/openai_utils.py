@@ -14,7 +14,7 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
 client = openai.OpenAI()
 
 @retry(stop=stop_after_attempt(3), wait=wait_random_exponential(min=1, max=60))
-def create_completion(model, messages, max_tokens=3500, temperature=0.7):
+def create_completion(model, messages, max_tokens=4000, temperature=0.7):
     try:
         response = client.chat.completions.create(
             model=model,
