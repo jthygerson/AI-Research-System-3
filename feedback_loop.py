@@ -86,6 +86,8 @@ class FeedbackLoop:
                 "3. Resources required: Additional tools or data needed\n"
                 "4. Expected outcomes: Anticipated improvements in specific performance metrics\n"
                 "5. Evaluation criteria: How to measure the success of the experiment\n\n"
+                "Ensure that each step in the experiment_plan has an 'action' key. "
+                "Valid actions are 'run_python_code', 'use_llm_api', 'web_request', and 'use_gpu'.\n\n"
                 "Ensure your response is a single, valid JSON object following this structure. "
                 "Ensure that all steps are executable and do not rely on non-existent resources or APIs. "
                 "For web requests, use real, accessible URLs. For GPU tasks, include a check for GPU availability."
@@ -124,6 +126,16 @@ class FeedbackLoop:
                     }
                     self.logger.warning("Refined plan didn't have the expected structure. Created a minimal valid structure.")
         
+        # Ensure each step in the experiment_plan has an 'action' key
+        for step in parsed_response['experiment_plan']:
+            if 'action' not in step:
+                if 'step' in step:
+                    step['action'] = 'run_python_code'  # Default action
+                    self.logger.warning(f"Added missing 'action' key to step: {step['step']}")
+                else:
+                    self.logger.warning(f"Removing invalid step without 'action' or 'step' key: {step}")
+                    parsed_response['experiment_plan'].remove(step)
+    
         return parsed_response
 
     def should_continue_refinement(self, old_plan, new_plan):
