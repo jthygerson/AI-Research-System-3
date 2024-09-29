@@ -77,6 +77,9 @@ class ExperimentExecutor:
             else:
                 python_path = os.path.join(venv_path, 'bin', 'python')
             
+            # Upgrade pip in the virtual environment
+            subprocess.check_call([python_path, "-m", "pip", "install", "--upgrade", "pip"])
+            
             # Install requirements in the virtual environment
             for req in requirements:
                 try:
@@ -223,6 +226,7 @@ class ExperimentExecutor:
                 self.logger.error(f"Failed to install requirement: {req}. Error: {str(e)}")
 
     def install_requirement(self, requirement):
+        # Check if the requirement is a built-in module
         if requirement in sys.builtin_module_names or (hasattr(sys, 'stdlib_module_names') and requirement in sys.stdlib_module_names):
             self.logger.info(f"Skipping built-in module: {requirement}")
             return
