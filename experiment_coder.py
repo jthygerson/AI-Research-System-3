@@ -4,7 +4,7 @@ import json
 from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
-from utils.json_utils import parse_llm_response, fix_json_string  # Add this import at the top of the file
+from utils.json_utils import parse_llm_response  # Change this line
 from experiment_execution import ExperimentExecutor
 from utils.resource_manager import ResourceManager
 import re
