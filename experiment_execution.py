@@ -25,12 +25,21 @@ class ActionStrategy(ABC):
         pass
 
 class ExperimentExecutor:
+    _instance = None
+
+    def __new__(cls, resource_manager, model_name):
+        if cls._instance is None:
+            cls._instance = super(ExperimentExecutor, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self, resource_manager, model_name):
+        if self._initialized:
+            return
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
         self.model_name = model_name
-        # Remove the following line as we don't need to initialize OpenAI here
-        # self.initialize_openai()
+        self._initialized = True
 
     def execute_experiment(self, experiment_package):
         self.logger.info("Preparing to execute experiment...")

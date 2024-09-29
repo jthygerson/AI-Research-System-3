@@ -126,6 +126,13 @@ class FeedbackLoop:
                     }
                     self.logger.warning("Refined plan didn't have the expected structure. Created a minimal valid structure.")
         
+        # Ensure all required keys are present
+        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
+        for key in required_keys:
+            if key not in parsed_response:
+                parsed_response[key] = f"No {key.replace('_', ' ')} specified"
+                self.logger.warning(f"Added missing required key: {key}")
+
         # Ensure each step in the experiment_plan has an 'action' key
         for step in parsed_response['experiment_plan']:
             if 'action' not in step:
@@ -157,6 +164,8 @@ class FeedbackLoop:
         if not isinstance(plan, dict):
             self.logger.error(f"Invalid plan type: expected dict, got {type(plan)}")
             return False
+        
+        self.logger.debug(f"Plan keys: {', '.join(plan.keys())}")
         
         if 'experiment_plan' not in plan:
             self.logger.error("Missing 'experiment_plan' key in the plan")

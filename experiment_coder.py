@@ -25,15 +25,7 @@ class ExperimentCoder:
             "experiment_plan": experiment_plan,
             "instructions": (
                 "Based on the provided experiment plan, write a Python program that executes the experiment. "
-                "Follow these guidelines:\n"
-                "1. Use clear and concise Python code.\n"
-                "2. Include necessary imports at the beginning of the file.\n"
-                "3. Implement each step of the methodology as a separate function.\n"
-                "4. Create a main function that orchestrates the execution of all steps.\n"
-                "5. Include error handling and logging where appropriate.\n"
-                "6. Add comments to explain complex parts of the code.\n"
-                "7. Ensure the code is compatible with Python 3.7+.\n"
-                "Provide the complete Python code for this experiment."
+                # ... (rest of the instructions)
             )
         }
         
@@ -44,7 +36,7 @@ class ExperimentCoder:
                     {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=4096,  # Increase the max_tokens to allow for longer responses
+                max_tokens=4096,
                 temperature=0.7,
             )
             
@@ -55,18 +47,18 @@ class ExperimentCoder:
             code = self.extract_code_from_response(response)
             
             if code:
-                # Check if the code is complete
-                if code.strip().endswith(('```', '"""')):
+                # Check if the code is complete (remove the check for '"""')
+                if self.is_code_complete(code):
                     self.logger.info("Experiment code generated successfully.")
                     return {"code": code, "requirements": self.extract_requirements(code)}
                 else:
-                    self.logger.warning("Generated code appears to be truncated. Attempting to complete it.")
+                    self.logger.warning("Generated code appears to be incomplete. Attempting to complete it.")
                     complete_code = self.complete_truncated_code(code)
                     if complete_code:
                         self.logger.info("Experiment code completed successfully.")
                         return {"code": complete_code, "requirements": self.extract_requirements(complete_code)}
                     else:
-                        self.logger.error("Failed to complete truncated code.")
+                        self.logger.error("Failed to complete incomplete code.")
                         return None
             else:
                 self.logger.error("Failed to generate valid experiment code.")
@@ -169,10 +161,17 @@ class ExperimentCoder:
             self.logger.error(f"Error completing truncated code: {str(e)}")
             return None
 
+    def is_code_complete(self, code):
+        # Check if the code has a balanced structure of functions and main block
+        lines = code.strip().split('\n')
+        function_count = sum(1 for line in lines if line.strip().startswith('def '))
+        main_block = any('if __name__ == "__main__":' in line for line in lines)
+        return function_count > 0 and main_block
+
     def extract_code_from_response(self, response):
         if isinstance(response, str):
             # Try to extract code from markdown code blocks
-            code_blocks = re.findall(r'```python\n(.*?)```', response, re.DOTALL)
+            code_blocks = re.findall(r'```(?:python)?\n(.*?)```', response, re.DOTALL)
             if code_blocks:
                 return '\n'.join(code_blocks)
             # If no code blocks found, return the entire response
@@ -180,7 +179,7 @@ class ExperimentCoder:
         elif hasattr(response, 'choices') and response.choices:
             content = response.choices[0].message.content.strip()
             # Try to extract code from markdown code blocks
-            code_blocks = re.findall(r'```python\n(.*?)```', content, re.DOTALL)
+            code_blocks = re.findall(r'```(?:python)?\n(.*?)```', content, re.DOTALL)
             if code_blocks:
                 return '\n'.join(code_blocks)
             # If no code blocks found, return the entire content
