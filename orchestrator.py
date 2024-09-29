@@ -125,6 +125,9 @@ def main():
     # Create a ResourceManager instance
     resource_manager = ResourceManager()
 
+    # Initialize ExperimentExecutor once
+    experiment_executor = ExperimentExecutor(args.model_name, args.max_tokens, resource_manager)
+
     # Initialize OpenAI client once at the start
     if not is_openai_initialized():
         initialize_openai()
@@ -149,7 +152,6 @@ def main():
                 idea_generator = IdeaGenerator(args.model_name, args.num_ideas, args.max_tokens)
                 idea_evaluator = IdeaEvaluator(args.model_name, args.max_tokens)
                 experiment_designer = ExperimentDesigner(args.model_name, args.max_tokens)
-                experiment_executor = ExperimentExecutor(args.model_name, args.max_tokens)  # Remove resource_manager
                 feedback_loop = FeedbackLoop(args.model_name, args.max_tokens)
                 system_augmentor = SystemAugmentor(args.model_name, args.max_tokens)
                 error_fixer = ErrorFixer(args.model_name, args.max_tokens)

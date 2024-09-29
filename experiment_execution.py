@@ -28,18 +28,25 @@ class ActionStrategy(ABC):
 class ExperimentExecutor:
     _instance = None
 
-    def __new__(cls, resource_manager, model_name):
+    def __new__(cls, model_name, max_tokens, resource_manager=None):
         if cls._instance is None:
             cls._instance = super(ExperimentExecutor, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
     def __init__(self, model_name, max_tokens, resource_manager=None):
-        self.model_name = model_name
-        self.max_tokens = max_tokens
-        self.resource_manager = resource_manager
-        self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log', console_level=logging.INFO)
-        initialize_openai()
+        if not self._initialized:
+            self.model_name = model_name
+            self.max_tokens = max_tokens
+            self.resource_manager = resource_manager
+            self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log', console_level=logging.INFO)
+            initialize_openai()
+            self._initialized = True
+        elif (self.model_name != model_name or 
+              self.max_tokens != max_tokens or 
+              self.resource_manager != resource_manager):
+            self.logger.warning("ExperimentExecutor is already initialized with different parameters. "
+                                "Using the existing instance.")
 
     def execute_experiment(self, experiment_package):
         self.logger.info("Preparing to execute experiment...")
