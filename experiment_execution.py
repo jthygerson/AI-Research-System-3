@@ -421,6 +421,7 @@ else:
 
 def parse_llm_response(response):
     # Existing code...
+    pass
 
 def extract_json_from_text(text):
     # Try to find JSON-like structure in the text

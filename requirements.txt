@@ -7,3 +7,4 @@ tenacity
 rpa>=1.0.0  # Add this line
 gputil  # Add this line
 psutil
+setuptools
