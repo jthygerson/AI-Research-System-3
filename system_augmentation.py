@@ -327,6 +327,7 @@ class SystemAugmentor:
         
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse response as JSON: {e}")
+            self.logger.debug(f"Raw response: {response}")
         
         return parsed_modifications
 

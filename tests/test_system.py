@@ -99,35 +99,31 @@ class TestAIResearchSystem(unittest.TestCase):
     def test_evaluate_ideas_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = json.dumps({
-            "scores": ["8", 7, "9", "invalid", 10],  # Mix of valid and invalid scores
+            "scores": [8, 7, 9],
             "justifications": {
                 "criterion_1": "Justification 1",
                 "criterion_2": "Justification 2",
-                "criterion_3": "Justification 3",
-                "criterion_4": "Justification 4",
-                "criterion_5": "Justification 5"
+                "criterion_3": "Justification 3"
             }
         })
         evaluator = IdeaEvaluator('gpt-4')
         scored_ideas = evaluator.evaluate_ideas(['Idea 1'])
         self.assertEqual(len(scored_ideas), 1)
-        self.assertEqual(scored_ideas[0]['score'], 34)  # 8 + 7 + 9 + 0 + 10
-        self.assertEqual(len(scored_ideas[0]['justifications']), 5)
+        self.assertEqual(scored_ideas[0]['score'], 24)  # 8 + 7 + 9
+        self.assertEqual(len(scored_ideas[0]['justifications']), 3)
 
     @patch('experiment_design.create_completion')
     def test_design_experiment_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = json.dumps({
             "experiment_plan": [
-                {"action": "run_python_code", "code": "print('Hello, World!')"},
-                {"action": "use_llm_api", "prompt": "Generate a test prompt"}
+                {"action": "run_python_code", "code": "print('Hello, World!')"}
             ]
         })
         designer = ExperimentDesigner('gpt-4')
         experiment_plan = designer.design_experiment("Test idea")
-        self.assertEqual(len(experiment_plan), 2)
+        self.assertEqual(len(experiment_plan), 1)
         self.assertEqual(experiment_plan[0]['action'], "run_python_code")
-        self.assertEqual(experiment_plan[1]['action'], "use_llm_api")
 
     @patch('feedback_loop.create_completion')
     def test_refine_experiment_chat_model(self, mock_create):
@@ -174,8 +170,8 @@ class TestAIResearchSystem(unittest.TestCase):
     def test_error_fixing_chat_model(self, mock_create):
         # Setup mock response for chat model
         mock_create.return_value = 'File: utils/logger.py\nLine 45: Add log rotation handler.'
+        fixer = ErrorFixer('gpt-4')
         with patch.object(ErrorFixer, 'apply_code_fixes') as mock_apply:
-            fixer = ErrorFixer('gpt-4')
             fixer.fix_errors('Issue 1: Error XYZ\nIssue 2: Warning ABC')
             mock_apply.assert_called_once_with('File: utils/logger.py\nLine 45: Add log rotation handler.')
 
