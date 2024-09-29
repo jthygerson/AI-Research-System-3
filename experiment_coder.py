@@ -5,6 +5,8 @@ from utils.logger import setup_logger
 from utils.openai_utils import create_completion
 from utils.config import initialize_openai
 from utils.json_utils import parse_llm_response  # Add this import at the top of the file
+from experiment_execution import ExperimentExecutor
+from utils.resource_manager import ResourceManager
 
 class ExperimentCoder:
     def __init__(self, model_name):
