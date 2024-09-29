@@ -62,7 +62,11 @@ class FeedbackLoop:
 
             # Ensure the refined plan has the same structure as the original experiment package
             return {
-                'experiment_plan': refined_plan,
+                'experiment_plan': refined_plan.get('experiment_plan', []),
+                'objectives': refined_plan.get('objectives', 'No objectives specified'),
+                'resources_required': refined_plan.get('resources_required', 'No resources specified'),
+                'expected_outcomes': refined_plan.get('expected_outcomes', 'No expected outcomes specified'),
+                'evaluation_criteria': refined_plan.get('evaluation_criteria', 'No evaluation criteria specified'),
                 'code': experiment_plan.get('code', ''),  # Preserve the original code if it exists
                 'resources': experiment_plan.get('resources', {})  # Preserve the original resources if they exist
             }
@@ -155,6 +159,13 @@ class FeedbackLoop:
             self.logger.error("Unexpected response format from LLM")
             return None
         
+        # Ensure all required keys are present
+        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
+        for key in required_keys:
+            if key not in parsed_response:
+                parsed_response[key] = f"No {key.replace('_', ' ')} specified"
+                self.logger.warning(f"Added missing required key: {key}")
+
         # Ensure the parsed response has the correct structure
         if parsed_response and isinstance(parsed_response, dict):
             if 'experiment_plan' not in parsed_response:
@@ -172,13 +183,6 @@ class FeedbackLoop:
                     }
                     self.logger.warning("Refined plan didn't have the expected structure. Created a minimal valid structure.")
         
-        # Ensure all required keys are present
-        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
-        for key in required_keys:
-            if key not in parsed_response:
-                parsed_response[key] = f"No {key.replace('_', ' ')} specified"
-                self.logger.warning(f"Added missing required key: {key}")
-
         # Ensure each step in the experiment_plan has an 'action' key
         for step in parsed_response['experiment_plan']:
             if 'action' not in step:

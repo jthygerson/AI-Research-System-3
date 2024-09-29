@@ -227,11 +227,11 @@ def main():
                 refined_experiment_package = feedback_loop.refine_experiment(experiment_package, results)
                 refined_experiment_package = parse_and_validate_plan(refined_experiment_package)
                 if not refined_experiment_package:
-                    main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
-                    continue
-
-                main_logger.info("Experiment plan refined successfully.")
-                main_logger.debug(f"Refined plan: {json.dumps(refined_experiment_package, indent=2)}")
+                    main_logger.warning("Failed to refine experiment plan. Using original plan.")
+                    refined_experiment_package = experiment_package
+                else:
+                    main_logger.info("Experiment plan refined successfully.")
+                    main_logger.debug(f"Refined plan: {json.dumps(refined_experiment_package, indent=2)}")
 
                 # Step 6: Refined Experiment Execution
                 main_logger.info("Executing refined experiment...")
@@ -306,9 +306,12 @@ def main():
                 words_received_from_llm = 0
 
             except Exception as e:
-                main_logger.error(f"Error in experiment run {experiment_run + 1}: {str(e)}")
+                main_logger.error(f"An unexpected error occurred: {e}")
                 main_logger.error(traceback.format_exc())
-                continue
+            finally:
+                if backup_path:
+                    restore_code(backup_path, '.')
+                    main_logger.info("Restored code from backup.")
 
         main_logger.info("AI Research System execution completed.")
 

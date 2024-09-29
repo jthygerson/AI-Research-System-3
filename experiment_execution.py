@@ -45,8 +45,11 @@ class ExperimentExecutor:
         elif (self.model_name != model_name or 
               self.max_tokens != max_tokens or 
               self.resource_manager != resource_manager):
-            self.logger.warning("ExperimentExecutor is already initialized with different parameters. "
-                                "Using the existing instance.")
+            self.logger.warning("ExperimentExecutor is already initialized. "
+                                "Updating parameters for the existing instance.")
+            self.model_name = model_name
+            self.max_tokens = max_tokens
+            self.resource_manager = resource_manager
 
     def execute_experiment(self, experiment_package):
         self.logger.info("Preparing to execute experiment...")
@@ -98,12 +101,13 @@ class ExperimentExecutor:
             "requirements": requirements,
             "instructions": (
                 "Review the provided code and error message. Identify and fix any issues, "
-                "ensuring compatibility with the given requirements. Provide the corrected "
-                "code as a JSON response."
+                "ensuring compatibility with the given requirements. Pay special attention to "
+                "indentation errors and other syntax issues. Provide the corrected code as a "
+                "JSON response, maintaining the original structure and formatting where possible."
             ),
             "response_format": {
                 "corrected_code": "The complete corrected Python code",
-                "explanation": "Explanation of the changes made"
+                "explanation": "Detailed explanation of the changes made, including specific lines modified"
             }
         }
         
@@ -111,7 +115,7 @@ class ExperimentExecutor:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI code reviewer and debugger."},
+                    {"role": "system", "content": "You are an AI code reviewer and debugger specializing in Python syntax and best practices."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=self.max_tokens,
@@ -122,6 +126,14 @@ class ExperimentExecutor:
             
             if reviewed_package and isinstance(reviewed_package, dict) and 'corrected_code' in reviewed_package:
                 self.logger.info(f"Code review complete. Explanation: {reviewed_package.get('explanation', 'No explanation provided.')}")
+                
+                # Verify that the corrected code doesn't introduce new syntax errors
+                try:
+                    compile(reviewed_package['corrected_code'], '<string>', 'exec')
+                except SyntaxError as se:
+                    self.logger.error(f"Corrected code contains syntax errors: {str(se)}")
+                    return code  # Return original code if correction introduces new errors
+                
                 return reviewed_package['corrected_code']
             else:
                 self.logger.error("Failed to get valid reviewed code.")
