@@ -47,7 +47,7 @@ class ExperimentCoder:
                     {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=3500,
+                max_tokens=4096,  # Increase the max_tokens to allow for longer responses
                 temperature=0.7,
             )
             
@@ -57,8 +57,20 @@ class ExperimentCoder:
             experiment_package = parse_llm_response(response)
             
             if experiment_package and isinstance(experiment_package, dict) and 'code' in experiment_package:
-                self.logger.info("Experiment code generated successfully.")
-                return experiment_package
+                # Check if the code is complete
+                if experiment_package['code'].strip().endswith(('```', '"""')):
+                    self.logger.info("Experiment code generated successfully.")
+                    return experiment_package
+                else:
+                    self.logger.warning("Generated code appears to be truncated. Attempting to complete it.")
+                    complete_code = self.complete_truncated_code(experiment_package['code'])
+                    if complete_code:
+                        experiment_package['code'] = complete_code
+                        self.logger.info("Experiment code completed successfully.")
+                        return experiment_package
+                    else:
+                        self.logger.error("Failed to complete truncated code.")
+                        return None
             else:
                 self.logger.error("Failed to generate valid experiment code.")
                 return None
@@ -117,3 +129,30 @@ class ExperimentCoder:
             f"6. Analyze the results according to the analysis plan: {experiment_plan.get('analysis_plan', 'Not specified')}",
         ]
         return instructions
+
+    def complete_truncated_code(self, truncated_code):
+        completion_prompt = {
+            "task": "complete_truncated_code",
+            "truncated_code": truncated_code,
+            "instructions": "Complete the following truncated Python code. Ensure that all functions and the main block are properly closed."
+        }
+        
+        try:
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
+                    {"role": "user", "content": json.dumps(completion_prompt)}
+                ],
+                max_tokens=2048,
+                temperature=0.7,
+            )
+            
+            completed_code = parse_llm_response(response)
+            if completed_code and isinstance(completed_code, str):
+                return completed_code
+            else:
+                return None
+        except Exception as e:
+            self.logger.error(f"Error completing truncated code: {str(e)}")
+            return None
