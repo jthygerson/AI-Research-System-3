@@ -21,6 +21,8 @@ import warnings
 import logging
 import pkg_resources
 import venv
+import time
+import threading
 
 class ActionStrategy(ABC):
     @abstractmethod
@@ -96,9 +98,18 @@ class ExperimentExecutor:
                 temp_file.write(code)
                 temp_file_path = temp_file.name
 
+            # Start a thread to display a progress indicator
+            stop_progress = threading.Event()
+            progress_thread = threading.Thread(target=self.display_progress, args=(stop_progress,))
+            progress_thread.start()
+
             # Execute the temporary file in the virtual environment
-            result = subprocess.run([python_path, temp_file_path], capture_output=True, text=True)
+            result = subprocess.run([python_path, temp_file_path], capture_output=True, text=True, timeout=300)  # 5-minute timeout
             
+            # Stop the progress indicator
+            stop_progress.set()
+            progress_thread.join()
+
             # Clean up the temporary file
             os.unlink(temp_file_path)
 
@@ -109,10 +120,22 @@ class ExperimentExecutor:
                 self.logger.error(f"Experiment execution failed with return code {result.returncode}")
                 self.logger.error(f"Error output: {result.stderr}")
                 return {'error': result.stderr}
+        except subprocess.TimeoutExpired:
+            self.logger.error("Experiment execution timed out after 5 minutes.")
+            return {'error': 'Execution timed out'}
         except Exception as e:
             self.logger.error(f"Error executing experiment: {str(e)}")
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             return {'error': str(e)}
+
+    def display_progress(self, stop_event):
+        spinner = ['|', '/', '-', '\\']
+        i = 0
+        while not stop_event.is_set():
+            print(f"\rExecuting experiment... {spinner[i % len(spinner)]}", end='', flush=True)
+            time.sleep(0.1)
+            i += 1
+        print("\rExperiment execution completed.       ")
 
     def run_experiment_code_with_review(self, code, requirements):
         max_attempts = 3
@@ -200,6 +223,10 @@ class ExperimentExecutor:
                 self.logger.error(f"Failed to install requirement: {req}. Error: {str(e)}")
 
     def install_requirement(self, requirement):
+        if requirement in sys.builtin_module_names or (hasattr(sys, 'stdlib_module_names') and requirement in sys.stdlib_module_names):
+            self.logger.info(f"Skipping built-in module: {requirement}")
+            return
+
         try:
             # Try to import the module first
             importlib.import_module(requirement)

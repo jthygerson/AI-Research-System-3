@@ -49,7 +49,7 @@ class ExperimentCoder:
             code = self.extract_code_from_response(response)
             
             if code:
-                # Check if the code is complete (remove the check for '"""')
+                # Check if the code is complete
                 if self.is_code_complete(code):
                     self.logger.info("Experiment code generated successfully.")
                     return {"code": code, "requirements": self.extract_requirements(code)}

@@ -81,6 +81,9 @@ class ExperimentDesigner:
                 self.logger.error("No experiment plan found in the response")
                 return []
             
+            # Log the experiment plan
+            self.log_experiment_plan(experiment_plan['experiment_plan'])
+            
             return experiment_plan['experiment_plan']
         
         except json.JSONDecodeError as e:
@@ -91,6 +94,17 @@ class ExperimentDesigner:
             self.logger.error(f"Error designing experiment: {e}")
             self.logger.debug(traceback.format_exc())
             return []
+
+    def log_experiment_plan(self, experiment_plan):
+        self.logger.info("Experiment Plan:")
+        for i, step in enumerate(experiment_plan, 1):
+            self.logger.info(f"Step {i}:")
+            for key, value in step.items():
+                if key == 'code':
+                    self.logger.info(f"  {key}: <code snippet>")
+                else:
+                    self.logger.info(f"  {key}: {value}")
+            self.logger.info("---")
 
     def _generate_design_prompt(self, idea):
         return {

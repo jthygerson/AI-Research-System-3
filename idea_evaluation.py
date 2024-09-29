@@ -25,6 +25,9 @@ class IdeaEvaluator:
 
     def evaluate_ideas(self, ideas):
         self.logger.info(f"Evaluating {len(ideas)} ideas")
+        for i, idea in enumerate(ideas):
+            self.logger.info(f"Idea {i+1}: {idea[:100]}...")  # Log each idea (truncated for brevity)
+        
         prompt = self._generate_evaluation_prompt(ideas)
         
         try:

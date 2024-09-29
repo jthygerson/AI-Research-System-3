@@ -172,6 +172,7 @@ def main():
                         if idea_hash not in all_idea_hashes:
                             all_idea_hashes.add(idea_hash)
                             generated_ideas.append(idea)
+                            main_logger.info(f"Generated idea: {idea[:100]}...")  # Log each generated idea
                             if len(generated_ideas) == args.num_ideas:
                                 break
                     if len(generated_ideas) == args.num_ideas:
@@ -182,6 +183,10 @@ def main():
                 main_logger.info("Evaluating ideas...")
                 scored_ideas = idea_evaluator.evaluate_ideas(generated_ideas)
                 
+                # Log scored ideas
+                for i, scored_idea in enumerate(scored_ideas):
+                    main_logger.info(f"Scored idea {i+1}: {scored_idea['idea'][:100]}... Score: {scored_idea['score']}")
+
                 # Find the best idea
                 best_idea = None
                 for scored_idea in scored_ideas:
