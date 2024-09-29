@@ -224,18 +224,18 @@ def main():
 
                 # Step 5: Feedback Loop
                 main_logger.info("Refining experiment plan...")
-                refined_plan = feedback_loop.refine_experiment(experiment_plan, results)
-                refined_plan = parse_and_validate_plan(refined_plan)
-                if not refined_plan:
+                refined_experiment_package = feedback_loop.refine_experiment(experiment_package, results)
+                refined_experiment_package = parse_and_validate_plan(refined_experiment_package)
+                if not refined_experiment_package:
                     main_logger.error("Failed to refine experiment plan. Skipping this experiment run.")
                     continue
 
                 main_logger.info("Experiment plan refined successfully.")
-                main_logger.debug(f"Refined plan: {json.dumps(refined_plan, indent=2)}")
+                main_logger.debug(f"Refined plan: {json.dumps(refined_experiment_package, indent=2)}")
 
                 # Step 6: Refined Experiment Execution
                 main_logger.info("Executing refined experiment...")
-                final_results = experiment_executor.execute_experiment(refined_plan)
+                final_results = experiment_executor.execute_experiment(refined_experiment_package)
                 if not final_results:
                     main_logger.error("Failed to execute refined experiment. Skipping this experiment run.")
                     continue
@@ -270,7 +270,7 @@ def main():
                 # Step 9: Report Writing
                 main_logger.info("Writing report...")
                 report_writer = ReportWriter()
-                report_writer.write_report(best_idea, refined_plan, final_results, current_performance)
+                report_writer.write_report(best_idea, refined_experiment_package, final_results, current_performance)
                 main_logger.info("Report written successfully.")
 
                 # Step 10: Log Error Checking

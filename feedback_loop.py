@@ -60,7 +60,12 @@ class FeedbackLoop:
                 self.logger.error("Final refined plan is not valid. Returning the last valid plan.")
                 return experiment_plan  # Return the original plan instead of None
 
-            return refined_plan
+            # Ensure the refined plan has the same structure as the original experiment package
+            return {
+                'experiment_plan': refined_plan,
+                'code': experiment_plan.get('code', ''),  # Preserve the original code if it exists
+                'resources': experiment_plan.get('resources', {})  # Preserve the original resources if they exist
+            }
         except Exception as e:
             self.logger.error(f"Error refining experiment plan: {str(e)}")
             self.logger.error(traceback.format_exc())
