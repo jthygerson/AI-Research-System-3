@@ -6,13 +6,17 @@ import time
 import traceback
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from utils.logger import setup_logger
-from orchestrator import log_api_call  # Add this import at the top of the file
 
 # Setup a logger for openai_utils
 logger = setup_logger('openai_utils', 'logs/openai_utils.log')
 
 # Initialize the OpenAI client
 client = openai.OpenAI()
+
+# Add this function at the top level of the file:
+def log_api_call(model, prompt, response):
+    # Implement logging logic here
+    pass
 
 @retry(stop=stop_after_attempt(3), wait=wait_random_exponential(min=1, max=60))
 def create_completion(model, messages, max_tokens=4000, temperature=0.7):

@@ -11,7 +11,7 @@ from utils.json_utils import parse_llm_response, extract_json_from_text  # Impor
 import time
 from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
-import openai
+# Remove import of openai here
 from logging import getLogger
 import logging
 

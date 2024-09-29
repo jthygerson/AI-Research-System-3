@@ -32,6 +32,7 @@ from utils.logger import setup_logger, ensure_log_file
 from utils.code_backup import backup_code, restore_code
 from utils.config import initialize_openai, is_openai_initialized
 from utils.resource_manager import ResourceManager
+from utils.openai_utils import log_api_call as openai_log_api_call
 
 # Set up loggers
 main_logger = setup_logger('main', 'logs/main.log')
@@ -52,6 +53,7 @@ def log_api_call(model, prompt, response):
         'prompt': prompt,
         'response': response
     })
+    openai_log_api_call(model, prompt, response)
 
 def hash_idea(idea):
     """

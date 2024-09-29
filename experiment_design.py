@@ -41,6 +41,10 @@ class ExperimentDesigner:
             }
         return cls._instance
 
+    def __init__(self, model_name, max_tokens=4000):
+        initialize_openai()
+        # Rest of the initialization
+
     def initialize_openai(self):
         self.logger.info("Initializing OpenAI client for ExperimentDesigner")
         initialize_openai()
