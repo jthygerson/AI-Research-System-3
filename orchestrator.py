@@ -132,6 +132,12 @@ def main():
     if not is_openai_initialized():
         initialize_openai()
 
+    # Initialize SystemAugmentor
+    system_augmentor = SystemAugmentor(args.model_name, args.max_tokens)
+
+    # Initialize Benchmarking with SystemAugmentor
+    benchmarking = Benchmarking(system_augmentor)
+
     try:
         # Initialize variable to store previous performance metrics
         previous_performance = None
@@ -152,8 +158,8 @@ def main():
                 idea_generator = IdeaGenerator(args.model_name, args.num_ideas, args.max_tokens)
                 idea_evaluator = IdeaEvaluator(args.model_name, args.max_tokens)
                 experiment_designer = ExperimentDesigner(args.model_name, args.max_tokens)
+                experiment_coder = ExperimentCoder(args.model_name, args.max_tokens)
                 feedback_loop = FeedbackLoop(args.model_name, args.max_tokens)
-                system_augmentor = SystemAugmentor(args.model_name, args.max_tokens)
                 error_fixer = ErrorFixer(args.model_name, args.max_tokens)
 
                 # Generate new ideas for this run
@@ -206,7 +212,6 @@ def main():
 
                 # New Step: Experiment Coding
                 main_logger.info("Generating experiment code...")
-                experiment_coder = ExperimentCoder(args.model_name, args.max_tokens)
                 experiment_package = experiment_coder.generate_experiment_code(experiment_plan)
                 if not experiment_package:
                     main_logger.error("Failed to generate experiment code. Skipping this experiment run.")
@@ -248,7 +253,6 @@ def main():
 
                 # Step 8: Benchmarking
                 main_logger.info("Running benchmarks...")
-                benchmarking = Benchmarking()
                 current_performance = benchmarking.run_benchmarks()
                 main_logger.info(f"Performance Metrics: {current_performance}")
 

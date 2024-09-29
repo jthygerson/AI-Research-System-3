@@ -4,8 +4,9 @@ from utils.logger import setup_logger
 from system_augmentation import SystemAugmentor
 
 class Benchmarking:
-    def __init__(self, model_name=None):
+    def __init__(self, system_augmentor=None):
         self.logger = setup_logger('benchmarking', 'logs/benchmarking.log')
+        self.system_augmentor = system_augmentor
 
     def run_benchmarks(self):
         self.logger.info("Running benchmarks...")
@@ -29,31 +30,35 @@ class Benchmarking:
             return {}
 
     def _evaluate_idea_quality(self):
-        return self.system_augmentor._benchmark_idea_quality()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_idea_quality()
 
     def _evaluate_idea_evaluation(self):
-        return self.system_augmentor._benchmark_idea_evaluation()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_idea_evaluation()
 
     def _evaluate_experiment_design(self):
-        return self.system_augmentor._benchmark_experiment_design()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_experiment_design()
 
     def _evaluate_experiment_execution(self):
-        return self.system_augmentor._benchmark_experiment_execution()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_experiment_execution()
 
     def _evaluate_research_application(self):
-        return self.system_augmentor._benchmark_research_application()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_research_application()
 
     def _evaluate_system_reliability(self):
-        return self.system_augmentor._benchmark_system_reliability()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_system_reliability()
 
     def _evaluate_coding_task_performance(self):
-        return self.system_augmentor._benchmark_coding_task()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_coding_task()
 
     def _evaluate_report_quality(self):
-        return self.system_augmentor._benchmark_report_quality()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_report_quality()
 
     def _evaluate_log_error_checking(self):
-        return self.system_augmentor._benchmark_log_error_checking()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_log_error_checking()
 
     def _evaluate_error_fixing(self):
-        return self.system_augmentor._benchmark_error_fixing()
+        return self._fallback_benchmark() if not self.system_augmentor else self.system_augmentor._benchmark_error_fixing()
+
+    def _fallback_benchmark(self):
+        self.logger.warning("Using fallback benchmark method. SystemAugmentor not available.")
+        return 0.5  # Return a default value

@@ -38,31 +38,34 @@ class ExperimentExecutor:
         if not self._initialized:
             self.model_name = model_name
             self.max_tokens = max_tokens
-            self.resource_manager = resource_manager
+            self.resource_manager = resource_manager or ResourceManager()
             self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log', console_level=logging.INFO)
             initialize_openai()
             self._initialized = True
         elif (self.model_name != model_name or 
               self.max_tokens != max_tokens or 
               self.resource_manager != resource_manager):
-            self.logger.warning("ExperimentExecutor is already initialized. "
-                                "Updating parameters for the existing instance.")
+            self.logger.info("Updating ExperimentExecutor parameters.")
             self.model_name = model_name
             self.max_tokens = max_tokens
-            self.resource_manager = resource_manager
+            self.resource_manager = resource_manager or self.resource_manager
 
     def execute_experiment(self, experiment_package):
         self.logger.info("Preparing to execute experiment...")
         
         if not isinstance(experiment_package, dict) or 'code' not in experiment_package:
             self.logger.error("Invalid experiment package format.")
-            return None
+            return {"error": "Invalid experiment package format"}
         
         code = experiment_package['code']
         requirements = experiment_package.get('requirements', [])
         
         # Set up the execution environment
-        self.setup_environment(requirements)
+        try:
+            self.setup_environment(requirements)
+        except Exception as e:
+            self.logger.error(f"Failed to set up environment: {str(e)}")
+            return {"error": f"Environment setup failed: {str(e)}"}
         
         # Execute the experiment code with error handling and code review
         results = self.run_experiment_code_with_review(code, requirements)
@@ -100,14 +103,18 @@ class ExperimentExecutor:
             "error_message": error_message,
             "requirements": requirements,
             "instructions": (
-                "Review the provided code and error message. Identify and fix any issues, "
+                "Review the provided Python code and error message. Identify and fix any issues, "
                 "ensuring compatibility with the given requirements. Pay special attention to "
-                "indentation errors and other syntax issues. Provide the corrected code as a "
-                "JSON response, maintaining the original structure and formatting where possible."
+                "syntax errors, indentation issues, and potential runtime errors. If the error is not "
+                "in the provided code snippet, consider potential issues with imported modules or "
+                "the execution environment. Provide the corrected code as a JSON response, maintaining "
+                "the original structure and formatting where possible. If no changes are needed in the "
+                "provided code, suggest potential external factors that might be causing the error."
             ),
             "response_format": {
                 "corrected_code": "The complete corrected Python code",
-                "explanation": "Detailed explanation of the changes made, including specific lines modified"
+                "explanation": "Detailed explanation of the changes made or potential external issues",
+                "additional_suggestions": ["List of additional suggestions to resolve the error"]
             }
         }
         
@@ -173,9 +180,11 @@ class ExperimentExecutor:
                 return {'stdout': result.stdout, 'stderr': result.stderr}
             else:
                 self.logger.error(f"Experiment execution failed with return code {result.returncode}")
+                self.logger.error(f"Error output: {result.stderr}")
                 return {'error': result.stderr}
         except Exception as e:
             self.logger.error(f"Error executing experiment: {str(e)}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return {'error': str(e)}
 
     # Remove the initialize_openai method as it's not needed in this class anymore

@@ -16,7 +16,8 @@ class ExperimentCoder:
         self.max_tokens = max_tokens
         self.logger = setup_logger('experiment_coder', 'logs/experiment_coder.log')
         initialize_openai()
-        self.executor = ExperimentExecutor(ResourceManager(), model_name)
+        # Remove the ExperimentExecutor initialization from here
+        # self.executor = ExperimentExecutor(ResourceManager(), model_name)
 
     def generate_experiment_code(self, experiment_plan):
         self.logger.info("Generating experiment code based on the provided plan...")

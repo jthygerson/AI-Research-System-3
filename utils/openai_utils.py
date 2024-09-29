@@ -13,10 +13,10 @@ logger = setup_logger('openai_utils', 'logs/openai_utils.log')
 # Initialize the OpenAI client
 client = openai.OpenAI()
 
-# Add this function at the top level of the file:
 def log_api_call(model, prompt, response):
-    # Implement logging logic here
-    pass
+    logger.info(f"API Call - Model: {model}")
+    logger.info(f"Prompt: {prompt[:100]}...")  # Log first 100 characters of prompt
+    logger.info(f"Response: {response[:100]}...")  # Log first 100 characters of response
 
 @retry(stop=stop_after_attempt(3), wait=wait_random_exponential(min=1, max=60))
 def create_completion(model, messages, max_tokens=4000, temperature=0.7):
@@ -33,6 +33,7 @@ def create_completion(model, messages, max_tokens=4000, temperature=0.7):
         return content
     except Exception as e:
         logger.error(f"Error in create_completion: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 def handle_api_error(func):
@@ -40,6 +41,7 @@ def handle_api_error(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"API Error: {str(e)}")
+            logger.error(f"API Error: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return str(e)
     return wrapper
