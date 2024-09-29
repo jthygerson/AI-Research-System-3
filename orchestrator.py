@@ -34,8 +34,8 @@ from utils.config import initialize_openai
 from utils.resource_manager import ResourceManager
 
 # Set up loggers
-main_logger = setup_logger('main', 'logs/main.log', console_level=logging.INFO)
-debug_logger = setup_logger('debug', 'logs/debug.log', level=logging.DEBUG, console_level=logging.DEBUG)
+main_logger = setup_logger('main', 'logs/main.log')
+debug_logger = setup_logger('debug', 'logs/debug.log', level=logging.DEBUG)
 
 # Initialize a list to store API call history for debugging purposes
 api_call_history = []

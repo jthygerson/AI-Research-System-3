@@ -3,6 +3,9 @@
 import shutil
 import os
 import datetime
+from utils.logger import setup_logger
+
+logger = setup_logger('code_backup', 'logs/code_backup.log')
 
 def backup_code(source_dir, backup_dir):
     """
@@ -20,7 +23,7 @@ def backup_code(source_dir, backup_dir):
         )
         return backup_path
     except Exception as e:
-        print(f"Error backing up code: {e}")
+        logger.error(f"Error backing up code: {e}")
         return None
 
 def restore_code(backup_path, source_dir):
@@ -50,4 +53,4 @@ def restore_code(backup_path, source_dir):
                 else:
                     shutil.copy2(s, d)
     except Exception as e:
-        print(f"Error restoring code: {e}")
+        logger.error(f"Error restoring code: {e}")

@@ -130,7 +130,7 @@ class ExperimentCoder:
             "3. Run the Python script generated for this experiment.",
             "4. Monitor the execution and check the logs for any errors or warnings.",
             "5. Collect the output data as specified in the data_collection section of the experiment plan.",
-            f"6. Analyze the results according to the analysis plan: {experiment_plan.get('analysis_plan', 'Not specified')}",
+            "6. Analyze the results according to the analysis plan: {experiment_plan.get('analysis_plan', 'Not specified')}",
         ]
         return instructions
 

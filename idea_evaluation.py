@@ -13,6 +13,7 @@ from utils.constants import chat_models
 import traceback  # Import traceback module for logging full error stack
 import openai
 from logging import getLogger
+import logging
 
 class IdeaEvaluator:
     def __init__(self, model_name, max_tokens=4000):

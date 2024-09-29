@@ -5,10 +5,10 @@ import logging
 import time
 import traceback
 from tenacity import retry, stop_after_attempt, wait_random_exponential
+from utils.logger import setup_logger
 
 # Setup a logger for openai_utils
-logger = logging.getLogger('openai_utils')
-logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logging
+logger = setup_logger('openai_utils', 'logs/openai_utils.log')
 
 # Initialize the OpenAI client
 client = openai.OpenAI()

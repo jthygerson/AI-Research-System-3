@@ -1,5 +1,8 @@
 import json
 import re
+from utils.logger import setup_logger
+
+logger = setup_logger('json_utils', 'logs/json_utils.log')
 
 def parse_llm_response(response):
     if isinstance(response, str):
@@ -7,7 +10,7 @@ def parse_llm_response(response):
     elif hasattr(response, 'choices') and response.choices:
         cleaned_response = response.choices[0].message.content.strip()
     else:
-        print("Unexpected response format")
+        logger.error("Unexpected response format")
         return None
 
     # Remove any line breaks and extra spaces within the JSON structure
@@ -24,8 +27,8 @@ def parse_llm_response(response):
         parsed_json = json.loads(cleaned_response)
         return parsed_json
     except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Problematic JSON string: {cleaned_response}")
+        logger.error(f"JSON parsing error: {e}")
+        logger.error(f"Problematic JSON string: {cleaned_response}")
         
         # Attempt to fix common JSON issues
         try:
@@ -36,7 +39,7 @@ def parse_llm_response(response):
             parsed_json = json.loads(cleaned_response)
             return parsed_json
         except json.JSONDecodeError:
-            print("Failed to fix JSON parsing issues.")
+            logger.error("Failed to fix JSON parsing issues.")
             return None
 
 # Add a new function to handle potential nested JSON structures

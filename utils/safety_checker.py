@@ -1,3 +1,4 @@
+from .logger import setup_logger
 import logging
 import re
 

@@ -13,7 +13,7 @@ import traceback
 # Remove redundant import
 # import openai
 
-logger = getLogger(__name__)
+logger = setup_logger('idea_generation', 'logs/idea_generation.log')
 
 class IdeaGenerator:
     def __init__(self, model_name, num_ideas, max_tokens=4000):
