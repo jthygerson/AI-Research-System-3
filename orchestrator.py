@@ -214,15 +214,27 @@ def main():
                     continue
 
                 main_logger.info("Experiment plan designed successfully.")
+                main_logger.debug(f"Experiment plan: {experiment_plan}")  # Add this line for debugging
 
                 # New Step: Experiment Coding
+                print("\n--- Starting Experiment Coding ---")
                 main_logger.info("Generating experiment code...")
-                experiment_package = experiment_coder.generate_experiment_code(experiment_plan)
-                if not experiment_package:
-                    main_logger.error("Failed to generate experiment code. Skipping this experiment run.")
+                try:
+                    print("Calling ExperimentCoder to generate code...")
+                    experiment_package = experiment_coder.generate_experiment_code(experiment_plan)
+                    if not experiment_package:
+                        print("Failed to generate experiment code. Skipping this experiment run.")
+                        main_logger.error("Failed to generate experiment code. Skipping this experiment run.")
+                        continue
+                    print("Experiment code generated successfully.")
+                    main_logger.info("Experiment code generated successfully.")
+                    main_logger.debug(f"Experiment package: {experiment_package}")
+                except Exception as e:
+                    print(f"Error during experiment coding: {str(e)}")
+                    main_logger.error(f"Error during experiment coding: {str(e)}")
+                    main_logger.error(traceback.format_exc())
                     continue
-
-                main_logger.info("Experiment code generated successfully.")
+                print("--- Experiment Coding Completed ---\n")
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")

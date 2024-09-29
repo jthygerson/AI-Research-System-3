@@ -9,6 +9,7 @@ from experiment_execution import ExperimentExecutor
 from utils.resource_manager import ResourceManager
 import re
 import sys
+import logging
 
 class ExperimentCoder:
     def __init__(self, model_name, max_tokens):
@@ -18,9 +19,15 @@ class ExperimentCoder:
         initialize_openai()
         # Remove the ExperimentExecutor initialization from here
         # self.executor = ExperimentExecutor(ResourceManager(), model_name)
+        self.console_logger = logging.getLogger('console')
+        self.console_logger.setLevel(logging.INFO)
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        self.console_logger.addHandler(console_handler)
 
     def generate_experiment_code(self, experiment_plan):
         self.logger.info("Generating experiment code based on the provided plan...")
+        self.console_logger.info("Starting experiment code generation...")
         
         prompt = {
             "task": "generate_experiment_code",
@@ -32,6 +39,7 @@ class ExperimentCoder:
         }
         
         try:
+            self.console_logger.info("Sending request to LLM for code generation...")
             response = create_completion(
                 self.model_name,
                 messages=[
@@ -42,6 +50,8 @@ class ExperimentCoder:
                 temperature=0.7,
             )
             
+            self.console_logger.info("Received response from LLM. Processing...")
+            
             # Log the full response from the LLM
             self.logger.debug(f"Full LLM response:\n{response}")
             
@@ -51,22 +61,22 @@ class ExperimentCoder:
             if code:
                 # Check if the code is complete
                 if self.is_code_complete(code):
-                    self.logger.info("Experiment code generated successfully.")
+                    self.console_logger.info("Experiment code generated successfully.")
                     return {"code": code, "requirements": self.extract_requirements(code)}
                 else:
-                    self.logger.warning("Generated code appears to be incomplete. Attempting to complete it.")
+                    self.console_logger.warning("Generated code appears to be incomplete. Attempting to complete it...")
                     complete_code = self.complete_truncated_code(code)
                     if complete_code:
-                        self.logger.info("Experiment code completed successfully.")
+                        self.console_logger.info("Experiment code completed successfully.")
                         return {"code": complete_code, "requirements": self.extract_requirements(complete_code)}
                     else:
-                        self.logger.error("Failed to complete incomplete code.")
+                        self.console_logger.error("Failed to complete incomplete code.")
                         return None
             else:
-                self.logger.error("Failed to generate valid experiment code.")
+                self.console_logger.error("Failed to generate valid experiment code.")
                 return None
         except Exception as e:
-            self.logger.error(f"Error generating experiment code: {str(e)}")
+            self.console_logger.error(f"Error generating experiment code: {str(e)}")
             return None
 
     def create_coding_prompt(self, experiment_plan):
@@ -137,6 +147,7 @@ class ExperimentCoder:
         return instructions
 
     def complete_truncated_code(self, truncated_code):
+        self.console_logger.info("Attempting to complete truncated code...")
         completion_prompt = {
             "task": "complete_truncated_code",
             "truncated_code": truncated_code,
@@ -160,7 +171,7 @@ class ExperimentCoder:
             else:
                 return None
         except Exception as e:
-            self.logger.error(f"Error completing truncated code: {str(e)}")
+            self.console_logger.error(f"Error completing truncated code: {str(e)}")
             return None
 
     def is_code_complete(self, code):
@@ -171,6 +182,7 @@ class ExperimentCoder:
         return function_count > 0 and main_block
 
     def extract_code_from_response(self, response):
+        self.console_logger.info("Extracting code from LLM response...")
         if isinstance(response, str):
             # Try to extract code from markdown code blocks
             code_blocks = re.findall(r'```(?:python)?\n(.*?)```', response, re.DOTALL)
