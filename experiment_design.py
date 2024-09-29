@@ -121,6 +121,8 @@ Example output format:
         {"action": "use_llm_api", "prompt": "Generate a test prompt"}
     ]
 }
+
+IMPORTANT: Your response must be a valid JSON object containing only the 'experiment_plan' key with a list of action dictionaries as its value. Do not include any additional text or explanations outside of the JSON structure.
             """,
             "output_format": "JSON"
         }

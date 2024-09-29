@@ -12,7 +12,10 @@ def parse_llm_response(response):
     Attempt to parse the LLM response as JSON.
     """
     try:
-        return json.loads(response)
+        if isinstance(response, str):
+            return json.loads(response)
+        elif hasattr(response, 'choices') and response.choices:
+            return json.loads(response.choices[0].message.content)
     except json.JSONDecodeError:
         return None
 
@@ -20,7 +23,11 @@ def extract_json_from_text(text):
     """
     Attempt to extract a JSON object from a text string.
     """
-    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+    # Try to find JSON-like structure in the text
+    json_match = re.search(r'\{(?:[^{}]|(?R))*\}', text)
     if json_match:
-        return json_match.group(0)
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            return None
     return None
