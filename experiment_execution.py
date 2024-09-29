@@ -418,3 +418,16 @@ else:
 """
         
         return executor.use_gpu(task)
+
+def parse_llm_response(response):
+    # Existing code...
+
+def extract_json_from_text(text):
+    # Try to find JSON-like structure in the text
+    json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', text)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return None

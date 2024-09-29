@@ -92,18 +92,12 @@ class IdeaGenerator:
                 # If JSON parsing fails, attempt to parse as text
                 self.logger.warning("Failed to parse JSON response. Attempting to parse as text.")
                 ideas = self.parse_text_response(response)
+                return ideas[:self.num_ideas]
 
-            # Log the generated ideas for debugging
-            self.logger.debug(f"Generated ideas: {ideas}")
-            if not ideas:
-                self.logger.warning("No ideas were generated")
-            return ideas
         except Exception as e:
-            # Log any errors that occur during idea generation
-            error_message = f"Error generating ideas: {str(e)}"
-            self.logger.error(error_message)
-            self.logger.error(traceback.format_exc())
-            return []
+            self.logger.error(f"Error generating ideas: {str(e)}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            return []  # Return an empty list if an error occurs
 
     def parse_text_response(self, response):
         # Fallback method to parse ideas from a text response if JSON parsing fails
