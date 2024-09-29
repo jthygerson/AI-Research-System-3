@@ -198,7 +198,7 @@ def main():
 
                 # Step 4: Experiment Execution
                 main_logger.info("Executing experiment...")
-                experiment_executor = ExperimentExecutor(resource_manager)
+                experiment_executor = ExperimentExecutor(resource_manager, model_name)
                 results = experiment_executor.execute_experiment(experiment_package)
                 if not results:
                     main_logger.error("Failed to execute experiment. Skipping this experiment run.")
