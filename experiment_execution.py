@@ -19,6 +19,8 @@ import tempfile
 import sys
 import warnings
 import logging
+import pkg_resources
+import venv
 
 class ActionStrategy(ABC):
     @abstractmethod
@@ -60,17 +62,57 @@ class ExperimentExecutor:
         code = experiment_package['code']
         requirements = experiment_package.get('requirements', [])
         
-        # Set up the execution environment
-        try:
-            self.setup_environment(requirements)
-        except Exception as e:
-            self.logger.error(f"Failed to set up environment: {str(e)}")
-            return {"error": f"Environment setup failed: {str(e)}"}
-        
-        # Execute the experiment code with error handling and code review
-        results = self.run_experiment_code_with_review(code, requirements)
+        # Create a temporary directory for the virtual environment
+        with tempfile.TemporaryDirectory() as temp_dir:
+            venv_path = os.path.join(temp_dir, 'venv')
+            
+            # Create a virtual environment
+            venv.create(venv_path, with_pip=True)
+            
+            # Get path to python in the virtual environment
+            if sys.platform == "win32":
+                python_path = os.path.join(venv_path, 'Scripts', 'python.exe')
+            else:
+                python_path = os.path.join(venv_path, 'bin', 'python')
+            
+            # Install requirements in the virtual environment
+            for req in requirements:
+                try:
+                    subprocess.check_call([python_path, "-m", "pip", "install", req])
+                    self.logger.info(f"Installed requirement: {req}")
+                except subprocess.CalledProcessError:
+                    self.logger.error(f"Failed to install requirement: {req}")
+            
+            # Execute the experiment code in the virtual environment
+            results = self.run_experiment_code_in_venv(code, python_path)
         
         return results
+
+    def run_experiment_code_in_venv(self, code, python_path):
+        self.logger.info("Executing experiment code in virtual environment...")
+        try:
+            # Create a temporary file to store the experiment code
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
+
+            # Execute the temporary file in the virtual environment
+            result = subprocess.run([python_path, temp_file_path], capture_output=True, text=True)
+            
+            # Clean up the temporary file
+            os.unlink(temp_file_path)
+
+            if result.returncode == 0:
+                self.logger.info("Experiment executed successfully.")
+                return {'stdout': result.stdout, 'stderr': result.stderr}
+            else:
+                self.logger.error(f"Experiment execution failed with return code {result.returncode}")
+                self.logger.error(f"Error output: {result.stderr}")
+                return {'error': result.stderr}
+        except Exception as e:
+            self.logger.error(f"Error executing experiment: {str(e)}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            return {'error': str(e)}
 
     def run_experiment_code_with_review(self, code, requirements):
         max_attempts = 3
@@ -153,20 +195,71 @@ class ExperimentExecutor:
         self.logger.info("Setting up execution environment...")
         for req in requirements:
             try:
-                if req not in sys.modules:
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", req])
-                    self.logger.info(f"Installed requirement: {req}")
-                else:
-                    self.logger.info(f"Requirement already satisfied: {req}")
-            except subprocess.CalledProcessError:
-                self.logger.error(f"Failed to install requirement: {req}")
+                self.install_requirement(req)
+            except Exception as e:
+                self.logger.error(f"Failed to install requirement: {req}. Error: {str(e)}")
+
+    def install_requirement(self, requirement):
+        try:
+            # Try to import the module first
+            importlib.import_module(requirement)
+            self.logger.info(f"Requirement already satisfied: {requirement}")
+        except ImportError:
+            # If import fails, try to install the package
+            self.logger.info(f"Installing requirement: {requirement}")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", requirement])
+            self.logger.info(f"Successfully installed: {requirement}")
+
+        # Check if the installed package has any post-installation steps
+        self.run_post_install_steps(requirement)
+
+    def run_post_install_steps(self, package):
+        if package.lower() == 'spacy':
+            self.download_language_model('en_core_web_sm')
+        # Add more post-installation steps for other packages as needed
+
+    def download_language_model(self, model_name):
+        self.logger.info(f"Attempting to download language model: {model_name}")
+        try:
+            subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+            self.logger.info(f"Successfully downloaded language model: {model_name}")
+        except subprocess.CalledProcessError:
+            self.logger.error(f"Failed to download language model: {model_name}")
 
     def run_experiment_code(self, code):
         self.logger.info("Executing experiment code...")
         try:
             # Create a temporary file to store the experiment code
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
-                temp_file.write(code)
+                # Add a general package and model handling preamble
+                preamble = """
+import importlib
+import subprocess
+import sys
+
+def ensure_package(package_name):
+    try:
+        importlib.import_module(package_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+
+def ensure_spacy_model(model_name):
+    import spacy
+    try:
+        nlp = spacy.load(model_name)
+    except OSError:
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+
+# Ensure common packages are available
+common_packages = ['numpy', 'pandas', 'scipy', 'sklearn', 'matplotlib', 'spacy']
+for package in common_packages:
+    ensure_package(package)
+
+# Ensure common language models are available
+ensure_spacy_model('en_core_web_sm')
+
+"""
+                temp_file.write(preamble + code)
                 temp_file_path = temp_file.name
 
             # Execute the temporary file
