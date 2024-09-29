@@ -51,65 +51,51 @@ class ExperimentDesigner:
 
     def design_experiment(self, idea):
         self.logger.info(f"Designing experiment for idea: {idea}")
+        prompt = self._generate_design_prompt(idea)
+        
         try:
-            codebase_summary = self.get_codebase_summary()
-            system_specs = self.get_system_specs()
-            
-            prompt = {
-                "task": "design_scientific_experiment",
-                "idea": idea,
-                "codebase_summary": codebase_summary,
-                "system_specs": system_specs,
-                "instructions": (
-                    "Design a rigorous scientific experiment to test the given idea for improving AI-Research-System-3. "
-                    "The experiment should be concrete, executable, and aimed at yielding novel knowledge that can be directly applied to enhance the current codebase. "
-                    "Provide the experiment plan as a valid JSON object with the following structure:"
-                ),
-                "response_format": {
-                    "hypothesis": "A clear, testable hypothesis based on the idea",
-                    "variables": {
-                        "independent": ["List of independent variables"],
-                        "dependent": ["List of dependent variables"],
-                        "controlled": ["List of controlled variables"]
-                    },
-                    "methodology": [
-                        {
-                            "step": "Step number",
-                            "description": "Detailed description of the step",
-                            "expected_outcome": "What this step should achieve"
-                        }
-                    ],
-                    "data_collection": "Description of how data will be collected and measured",
-                    "analysis_plan": "Description of how the collected data will be analyzed",
-                    "expected_outcomes": "Anticipated results and their implications for the codebase",
-                    "potential_challenges": "Possible obstacles and mitigation strategies",
-                    "ethical_considerations": "Any ethical issues to be addressed",
-                    "resources_required": ["List of necessary tools, libraries, or data"]
-                }
-            }
-
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a world-class computer scientist specializing in AI model and system improvement. Always respond with valid JSON exactly as specified in the instructions."},
+                    {"role": "system", "content": "You are an AI research assistant. Design an experiment based on the given idea."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
-                max_tokens=self.max_tokens,
-                temperature=0.7,
+                max_tokens=self.max_tokens
             )
             
-            experiment_plan = parse_llm_response(response)
+            experiment_plan = json.loads(response)
             
-            if not experiment_plan or not isinstance(experiment_plan, dict):
-                self.logger.error("Failed to generate a valid experiment plan.")
-                return None
-
-            self.logger.info("Experiment plan designed successfully.")
-            return experiment_plan
+            if not experiment_plan.get('experiment_plan'):
+                self.logger.error("No experiment plan found in the response")
+                return []
+            
+            return experiment_plan['experiment_plan']
+        
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to parse response as JSON: {response}")
+            return []
         except Exception as e:
-            self.logger.error(f"Error designing experiment: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            return None
+            self.logger.error(f"Error designing experiment: {e}")
+            return []
+
+    def _generate_design_prompt(self, idea):
+        return {
+            "task": "design_experiment",
+            "idea": idea,
+            "instructions": """
+Design an experiment to test the given idea. The experiment plan should be a list of actions.
+Each action should be a dictionary with at least an 'action' key and any necessary parameters.
+
+Example output format:
+{
+    "experiment_plan": [
+        {"action": "run_python_code", "code": "print('Hello, World!')"},
+        {"action": "use_llm_api", "prompt": "Generate a test prompt"}
+    ]
+}
+            """,
+            "output_format": "JSON"
+        }
 
     def validate_and_fix_plan(self, methodology):
         fixed_methodology = []

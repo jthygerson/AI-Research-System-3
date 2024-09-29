@@ -19,19 +19,14 @@ class ErrorFixer:
         """
         Adjusts the system's code to correct any errors or warnings found.
         """
-        self.logger.info("Fixing errors and warnings found in logs...")
+        self.logger.info(f"Fixing errors: {errors_warnings}")
+        prompt = self._generate_fix_prompt(errors_warnings)
+        
         try:
-            prompt = {
-                "task": "fix_errors",
-                "errors_warnings": errors_warnings,
-                "instructions": "Provide specific code changes to fix these issues, including the file names and line numbers. Ensure the changes improve the system's reliability and performance.",
-                "output_format": "JSON"
-            }
-            
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a code fixer and system optimizer."},
+                    {"role": "system", "content": "You are an AI research assistant. Suggest fixes for the given errors and warnings."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=self.max_tokens,
@@ -40,13 +35,16 @@ class ErrorFixer:
             
             self.logger.info(f"Raw API response: {response}")
             
-            parsed_response = parse_llm_response(response)
-            if parsed_response:
-                self.logger.info(f"Suggested code fixes: {parsed_response}")
-                # Apply the code fixes
-                self.apply_code_fixes(parsed_response)  # Removed json.dumps() as parsed_response is already a Python object
-            else:
-                self.logger.warning("Failed to parse the API response.")
+            fixes = json.loads(response)
+            
+            if not fixes.get('fixes'):
+                self.logger.error("No fixes found in the response")
+                return
+            
+            self.apply_code_fixes(fixes['fixes'])
+        
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to parse response as JSON: {response}")
         except Exception as e:
             self.logger.error(f"Error fixing errors: {e}")
             self.logger.error(traceback.format_exc())
@@ -55,7 +53,25 @@ class ErrorFixer:
         """
         Applies the suggested code fixes to the system.
         """
-        self.logger.info("Applying code fixes...")
-        # Implement parsing of fixes and apply changes to files
-        # Due to safety concerns, actual code modification is not implemented
-        self.logger.info("Code fixes logged but not applied for safety.")
+        self.logger.info(f"Applying code fixes: {fixes}")
+        # Implement the logic to apply the fixes to the code
+        # This is where you would modify the actual code files
+        pass
+
+    def _generate_fix_prompt(self, errors_warnings):
+        return {
+            "task": "fix_errors",
+            "errors_warnings": errors_warnings,
+            "instructions": """
+Suggest fixes for the given errors and warnings. Provide the exact code modifications needed, including the file names and line numbers.
+
+Example output format:
+{
+    "fixes": [
+        {"file": "utils/logger.py", "line": 45, "fix": "Add log rotation handler."},
+        {"file": "experiment_execution.py", "line": 78, "fix": "Handle potential division by zero error."}
+    ]
+}
+            """,
+            "output_format": "JSON"
+        }

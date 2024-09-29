@@ -24,17 +24,73 @@ class IdeaEvaluator:
         initialize_openai()
 
     def evaluate_ideas(self, ideas):
-        self.debug_logger.debug(f"Starting evaluation of {len(ideas)} ideas")
         self.logger.info(f"Evaluating {len(ideas)} ideas")
-        scored_ideas = []
+        prompt = self._generate_evaluation_prompt(ideas)
         
-        for idea in ideas:
-            scored_idea = self.evaluate_single_idea(idea)
-            if scored_idea:
-                scored_ideas.append(scored_idea)
-                self.logger.info(f"Evaluated idea: {scored_idea['idea']} with score: {scored_idea['score']}")
+        try:
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI research assistant. Evaluate the given ideas based on their potential impact, feasibility, and originality."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=self.max_tokens
+            )
+            
+            evaluation = json.loads(response)
+            
+            if not evaluation.get('scores') or not evaluation.get('justifications'):
+                self.logger.error("Invalid evaluation response structure")
+                return []
+            
+            scored_ideas = []
+            for i, idea in enumerate(ideas):
+                score = sum(evaluation['scores'][i])
+                justifications = evaluation['justifications'][i]
+                scored_ideas.append({
+                    'idea': idea,
+                    'score': score,
+                    'justifications': justifications
+                })
+            
+            return scored_ideas
+        
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to parse response as JSON: {response}")
+            return []
+        except Exception as e:
+            self.logger.error(f"Error evaluating ideas: {e}")
+            return []
 
-        return scored_ideas
+    def _generate_evaluation_prompt(self, ideas):
+        return {
+            "task": "evaluate_ideas",
+            "ideas": ideas,
+            "instructions": """
+Evaluate each idea based on its potential impact, feasibility, and originality. Provide a score for each criterion (0-10) and a brief justification.
+
+Example output format:
+{
+    "scores": [
+        [8, 7, 9],
+        [6, 8, 7]
+    ],
+    "justifications": [
+        {
+            "impact": "High potential for revolutionizing the field",
+            "feasibility": "Requires advanced technology, but achievable",
+            "originality": "Novel approach not seen before"
+        },
+        {
+            "impact": "Moderate improvement over existing methods",
+            "feasibility": "Can be implemented with current resources",
+            "originality": "Builds on existing ideas with some new elements"
+        }
+    ]
+}
+            """,
+            "output_format": "JSON"
+        }
 
     def evaluate_single_idea(self, idea):
         try:

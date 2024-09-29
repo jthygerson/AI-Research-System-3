@@ -234,7 +234,7 @@ class SystemAugmentor:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI research assistant. Always provide your response in the exact JSON format specified in the instructions."},
+                    {"role": "system", "content": "You are an AI research assistant. Suggest improvements to the AI Research System based on the experiment results."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=self.max_tokens,
