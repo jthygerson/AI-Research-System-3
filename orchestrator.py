@@ -30,7 +30,7 @@ from experiment_coder import ExperimentCoder
 # Import utility functions
 from utils.logger import setup_logger, ensure_log_file
 from utils.code_backup import backup_code, restore_code
-from utils.config import initialize_openai
+from utils.config import initialize_openai, is_openai_initialized
 from utils.resource_manager import ResourceManager
 
 # Set up loggers
@@ -44,6 +44,9 @@ def log_api_call(model, prompt, response):
     """
     Log API calls for debugging and analysis.
     """
+    global words_sent_to_llm, words_received_from_llm
+    words_sent_to_llm += len(prompt.split())
+    words_received_from_llm += len(response.split())
     api_call_history.append({
         'model': model,
         'prompt': prompt,
@@ -115,10 +118,11 @@ def main():
     # Create a ResourceManager instance
     resource_manager = ResourceManager()
 
-    try:
-        # Initialize OpenAI client once at the start
+    # Initialize OpenAI client once at the start
+    if not is_openai_initialized():
         initialize_openai()
-        
+
+    try:
         # Initialize variable to store previous performance metrics
         previous_performance = None
 
@@ -286,6 +290,10 @@ def main():
                     main_logger.info("All tests passed successfully.")
 
                 main_logger.info("Experiment run completed.")
+                print(f"Words sent to LLM: {words_sent_to_llm}")
+                print(f"Words received from LLM: {words_received_from_llm}")
+                words_sent_to_llm = 0
+                words_received_from_llm = 0
 
             except Exception as e:
                 main_logger.error(f"Error in experiment run {experiment_run + 1}: {str(e)}")

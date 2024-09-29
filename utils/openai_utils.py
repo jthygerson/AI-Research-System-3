@@ -6,6 +6,7 @@ import time
 import traceback
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from utils.logger import setup_logger
+from orchestrator import log_api_call  # Add this import at the top of the file
 
 # Setup a logger for openai_utils
 logger = setup_logger('openai_utils', 'logs/openai_utils.log')
@@ -22,7 +23,10 @@ def create_completion(model, messages, max_tokens=4000, temperature=0.7):
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        return response.choices[0].message.content if response.choices else None
+        content = response.choices[0].message.content if response.choices else None
+        if content:
+            log_api_call(model, str(messages), content)  # Log the API call
+        return content
     except Exception as e:
         logger.error(f"Error in create_completion: {str(e)}")
         raise
