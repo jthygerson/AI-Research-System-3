@@ -302,6 +302,9 @@ class SystemAugmentor:
         try:
             modifications = json.loads(response)
             
+            if isinstance(modifications, dict):
+                modifications = [modifications]  # Convert single modification to list
+            
             if not isinstance(modifications, list):
                 self.logger.error(f"Expected a JSON array of modifications, got: {type(modifications)}")
                 return []

@@ -25,7 +25,19 @@ class FeedbackLoop:
         print("Initial Results:")
         print(pformat(initial_results, indent=2))
         
-        refined_plan = experiment_plan
+        # Convert experiment_plan to a dictionary if it's a list
+        if isinstance(experiment_plan, list):
+            experiment_plan = {
+                'experiment_plan': experiment_plan,
+                'objectives': 'No objectives specified',
+                'resources_required': 'No resources specified',
+                'expected_outcomes': 'No expected outcomes specified',
+                'evaluation_criteria': 'No evaluation criteria specified',
+                'code': '',
+                'resources': {}
+            }
+        
+        refined_plan = experiment_plan.copy()
         try:
             for iteration in range(self.max_iterations):
                 prompt = self.create_refinement_prompt(initial_results, refined_plan)
@@ -67,8 +79,8 @@ class FeedbackLoop:
                 'resources_required': refined_plan.get('resources_required', 'No resources specified'),
                 'expected_outcomes': refined_plan.get('expected_outcomes', 'No expected outcomes specified'),
                 'evaluation_criteria': refined_plan.get('evaluation_criteria', 'No evaluation criteria specified'),
-                'code': experiment_plan.get('code', ''),  # Preserve the original code if it exists
-                'resources': experiment_plan.get('resources', {})  # Preserve the original resources if they exist
+                'code': refined_plan.get('code', experiment_plan.get('code', '')),
+                'resources': refined_plan.get('resources', experiment_plan.get('resources', {}))
             }
         except Exception as e:
             self.logger.error(f"Error refining experiment plan: {str(e)}")
@@ -159,13 +171,6 @@ class FeedbackLoop:
             self.logger.error("Unexpected response format from LLM")
             return None
         
-        # Ensure all required keys are present
-        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
-        for key in required_keys:
-            if key not in parsed_response:
-                parsed_response[key] = f"No {key.replace('_', ' ')} specified"
-                self.logger.warning(f"Added missing required key: {key}")
-
         # Ensure the parsed response has the correct structure
         if parsed_response and isinstance(parsed_response, dict):
             if 'experiment_plan' not in parsed_response:
@@ -182,7 +187,24 @@ class FeedbackLoop:
                         'evaluation_criteria': 'Compare results with initial experiment'
                     }
                     self.logger.warning("Refined plan didn't have the expected structure. Created a minimal valid structure.")
-        
+        else:
+            # If parsed_response is None or not a dict, create a minimal valid structure
+            parsed_response = {
+                'experiment_plan': [],
+                'objectives': 'Improve experiment based on initial results',
+                'resources_required': 'No additional resources specified',
+                'expected_outcomes': 'Improved performance',
+                'evaluation_criteria': 'Compare results with initial experiment'
+            }
+            self.logger.warning("Failed to parse response. Created a minimal valid structure.")
+
+        # Ensure all required keys are present
+        required_keys = ['objectives', 'resources_required', 'expected_outcomes', 'evaluation_criteria']
+        for key in required_keys:
+            if key not in parsed_response:
+                parsed_response[key] = f"No {key.replace('_', ' ')} specified"
+                self.logger.warning(f"Added missing required key: {key}")
+
         # Ensure each step in the experiment_plan has an 'action' key
         for step in parsed_response['experiment_plan']:
             if 'action' not in step:

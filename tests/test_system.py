@@ -11,6 +11,7 @@ from log_error_checker import LogErrorChecker
 from error_fixing import ErrorFixer
 import logging
 import json
+import os
 from system_augmentation import SystemAugmentor
 
 class TestAIResearchSystem(unittest.TestCase):
@@ -144,26 +145,22 @@ class TestAIResearchSystem(unittest.TestCase):
         self.assertEqual(refined_plan[0]['action'], "run_python_code")
         self.assertEqual(refined_plan[1]['action'], "use_llm_api")
 
-    @patch('system_augmentation.create_completion')
-    def test_system_augmentation_chat_model(self, mock_create):
-        # Setup mock response for chat model
-        mock_create.return_value = json.dumps({
-            "code_modifications": [
-                {"file": "idea_generation.py", "line": 45, "code": "# Modified code here"},
-                {"file": "idea_evaluation.py", "line": 30, "code": "# Another modification"}
-            ]
-        })
-        augmentor = SystemAugmentor('gpt-4')
-        with patch.object(SystemAugmentor, '_validate_modifications', return_value=True), \
-             patch.object(SystemAugmentor, '_apply_code_modifications'), \
-             patch.object(SystemAugmentor, '_run_tests', return_value=True), \
-             patch.object(SystemAugmentor, '_evaluate_performance_improvement', return_value=True):
-            augmentor.augment_system("Test experiment results")
-        # Assert that the methods were called (you can add more specific assertions if needed)
-        self.assertTrue(augmentor._validate_modifications.called)
-        self.assertTrue(augmentor._apply_code_modifications.called)
-        self.assertTrue(augmentor._run_tests.called)
-        self.assertTrue(augmentor._evaluate_performance_improvement.called)
+    @patch.object(SystemAugmentor, '_validate_modifications')
+    @patch.object(SystemAugmentor, '_apply_code_modifications')
+    @patch.object(SystemAugmentor, '_run_tests')
+    @patch.object(SystemAugmentor, '_evaluate_performance_improvement')
+    def test_system_augmentation_chat_model(self, mock_evaluate, mock_run_tests, mock_apply, mock_validate):
+        mock_validate.return_value = True
+        mock_run_tests.return_value = True
+        mock_evaluate.return_value = True
+        
+        augmentor = SystemAugmentor()
+        augmentor.augment_system({})
+        
+        self.assertTrue(mock_validate.called)
+        self.assertTrue(mock_apply.called)
+        self.assertTrue(mock_run_tests.called)
+        self.assertTrue(mock_evaluate.called)
 
     @patch('log_error_checker.create_completion')
     def test_log_error_checker_chat_model(self, mock_create):
