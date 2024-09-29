@@ -59,12 +59,17 @@ class ExperimentCoder:
             code = self.extract_code_from_response(response)
             
             if code:
+                # Log the extracted code
+                self.logger.debug(f"Extracted code:\n{code}")
+                
                 # Check if the code is complete
                 if self.is_code_complete(code):
                     self.console_logger.info("Experiment code generated successfully.")
                     return {"code": code, "requirements": self.extract_requirements(code)}
                 else:
                     self.console_logger.warning("Generated code appears to be incomplete. Attempting to complete it...")
+                    # Log the reason why the code is considered incomplete
+                    self.logger.debug(f"Code incompleteness reason: {self.get_incompleteness_reason(code)}")
                     complete_code = self.complete_truncated_code(code)
                     if complete_code:
                         self.console_logger.info("Experiment code completed successfully.")
@@ -200,3 +205,16 @@ class ExperimentCoder:
             return content
         else:
             return None
+
+    def get_incompleteness_reason(self, code):
+        lines = code.strip().split('\n')
+        function_count = sum(1 for line in lines if line.strip().startswith('def '))
+        main_block = any('if __name__ == "__main__":' in line for line in lines)
+        
+        reasons = []
+        if function_count == 0:
+            reasons.append("No functions defined")
+        if not main_block:
+            reasons.append("No main block found")
+        
+        return ", ".join(reasons) if reasons else "Unknown reason"
