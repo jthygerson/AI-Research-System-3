@@ -275,7 +275,7 @@ def main():
 
                 # Step 10: Log Error Checking
                 main_logger.info("Checking logs for errors and warnings...")
-                log_error_checker = LogErrorChecker(args.model_name, args.max_tokens)
+                log_error_checker = LogErrorChecker(args.model_name)  # Remove args.max_tokens
                 errors_warnings = log_error_checker.check_logs('logs/main.log')
                 main_logger.info(f"Log Analysis: {len(errors_warnings)} issues found")
 
