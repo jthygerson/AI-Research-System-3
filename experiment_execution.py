@@ -34,10 +34,10 @@ class ExperimentExecutor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, resource_manager, model_name, max_tokens=4000):
-        self.resource_manager = resource_manager
+    def __init__(self, model_name, max_tokens, resource_manager=None):
         self.model_name = model_name
         self.max_tokens = max_tokens
+        self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log', console_level=logging.INFO)
         initialize_openai()
 

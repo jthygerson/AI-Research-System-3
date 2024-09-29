@@ -138,7 +138,7 @@ def main():
                 idea_generator = IdeaGenerator(args.model_name, args.num_ideas, args.max_tokens)
                 idea_evaluator = IdeaEvaluator(args.model_name, args.max_tokens)
                 experiment_designer = ExperimentDesigner(args.model_name, args.max_tokens)
-                experiment_executor = ExperimentExecutor(resource_manager, args.model_name, args.max_tokens)
+                experiment_executor = ExperimentExecutor(args.model_name, args.max_tokens)  # Remove resource_manager
                 feedback_loop = FeedbackLoop(args.model_name, args.max_tokens)
                 system_augmentor = SystemAugmentor(args.model_name, args.max_tokens)
                 error_fixer = ErrorFixer(args.model_name, args.max_tokens)
