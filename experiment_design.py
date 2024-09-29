@@ -63,7 +63,12 @@ class ExperimentDesigner:
                 max_tokens=self.max_tokens
             )
             
-            experiment_plan = json.loads(response)
+            # Check if the response is already a dictionary
+            if isinstance(response, dict):
+                experiment_plan = response
+            else:
+                # If it's a string, try to parse it as JSON
+                experiment_plan = json.loads(response)
             
             if not experiment_plan.get('experiment_plan'):
                 self.logger.error("No experiment plan found in the response")
@@ -73,6 +78,9 @@ class ExperimentDesigner:
         
         except json.JSONDecodeError:
             self.logger.error(f"Failed to parse response as JSON: {response}")
+            # If JSON parsing fails, check if the response is already the experiment plan
+            if isinstance(response, list) and all(isinstance(item, dict) for item in response):
+                return response
             return []
         except Exception as e:
             self.logger.error(f"Error designing experiment: {e}")
