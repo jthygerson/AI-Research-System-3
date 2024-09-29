@@ -118,8 +118,11 @@ class ExperimentExecutor:
         self.logger.info("Setting up execution environment...")
         for req in requirements:
             try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", req])
-                self.logger.info(f"Installed requirement: {req}")
+                if req not in sys.modules:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+                    self.logger.info(f"Installed requirement: {req}")
+                else:
+                    self.logger.info(f"Requirement already satisfied: {req}")
             except subprocess.CalledProcessError:
                 self.logger.error(f"Failed to install requirement: {req}")
 

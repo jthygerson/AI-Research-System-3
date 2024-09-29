@@ -8,6 +8,7 @@ from utils.json_utils import parse_llm_response  # Change this line
 from experiment_execution import ExperimentExecutor
 from utils.resource_manager import ResourceManager
 import re
+import sys
 
 class ExperimentCoder:
     def __init__(self, model_name):
@@ -107,12 +108,27 @@ class ExperimentCoder:
         # Extract required libraries from the import statements
         import_lines = [line for line in code.split('\n') if line.startswith('import') or line.startswith('from')]
         requirements = set()
+        builtin_modules = set(sys.builtin_module_names)
+        stdlib_modules = set(sys.stdlib_module_names) if hasattr(sys, 'stdlib_module_names') else set()
+        
         for line in import_lines:
             if line.startswith('import'):
-                requirements.add(line.split()[1].split('.')[0])
+                module = line.split()[1].split('.')[0]
+                if module not in builtin_modules and module not in stdlib_modules:
+                    requirements.add(module)
             elif line.startswith('from'):
-                requirements.add(line.split()[1])
-        return list(requirements)
+                module = line.split()[1].split('.')[0]
+                if module not in builtin_modules and module not in stdlib_modules:
+                    requirements.add(module)
+        
+        # Map some common module names to their correct package names
+        package_mapping = {
+            'scipy': 'scipy',
+            'sklearn': 'scikit-learn',
+            'PIL': 'pillow',
+        }
+        
+        return [package_mapping.get(req, req) for req in requirements]
 
     def generate_execution_instructions(self, experiment_plan):
         # Generate instructions for executing the experiment
