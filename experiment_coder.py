@@ -11,6 +11,7 @@ class ExperimentCoder:
         self.model_name = model_name
         self.logger = setup_logger('experiment_coder', 'logs/experiment_coder.log')
         initialize_openai()
+        self.executor = ExperimentExecutor(ResourceManager(), model_name)
 
     def generate_experiment_code(self, experiment_plan):
         self.logger.info("Generating experiment code based on the provided plan...")
@@ -41,12 +42,15 @@ class ExperimentCoder:
             response = create_completion(
                 self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an AI assistant specialized in writing Python code for scientific experiments. Always respond with valid JSON."},
+                    {"role": "system", "content": "You are an AI research assistant specializing in coding experiments."},
                     {"role": "user", "content": json.dumps(prompt)}
                 ],
                 max_tokens=3500,
                 temperature=0.7,
             )
+            
+            # Log the full response from the LLM
+            self.logger.debug(f"Full LLM response:\n{response}")
             
             experiment_package = parse_llm_response(response)
             

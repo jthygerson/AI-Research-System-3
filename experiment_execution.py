@@ -25,9 +25,10 @@ class ActionStrategy(ABC):
         pass
 
 class ExperimentExecutor:
-    def __init__(self, resource_manager):
+    def __init__(self, resource_manager, model_name):
         self.resource_manager = resource_manager
         self.logger = setup_logger('experiment_execution', 'logs/experiment_execution.log')
+        self.model_name = model_name
         # Remove the following line as we don't need to initialize OpenAI here
         # self.initialize_openai()
 
@@ -40,15 +41,78 @@ class ExperimentExecutor:
         
         code = experiment_package['code']
         requirements = experiment_package.get('requirements', [])
-        instructions = experiment_package.get('instructions', [])
         
         # Set up the execution environment
         self.setup_environment(requirements)
         
-        # Execute the experiment code
-        results = self.run_experiment_code(code)
+        # Execute the experiment code with error handling and code review
+        results = self.run_experiment_code_with_review(code, requirements)
         
         return results
+
+    def run_experiment_code_with_review(self, code, requirements):
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            self.logger.info(f"Execution attempt {attempt + 1}/{max_attempts}")
+            
+            results = self.run_experiment_code(code)
+            
+            if 'error' not in results:
+                return results
+            
+            self.logger.warning(f"Execution failed. Reviewing code...")
+            reviewed_code = self.review_and_correct_code(code, results['error'], requirements)
+            
+            if reviewed_code == code:
+                self.logger.error("Code review did not produce any changes. Aborting execution.")
+                return results
+            
+            code = reviewed_code
+
+        self.logger.error("Max execution attempts reached. Experiment failed.")
+        return results
+
+    def review_and_correct_code(self, code, error_message, requirements):
+        self.logger.info("Reviewing and correcting code...")
+        
+        prompt = {
+            "task": "review_and_correct_code",
+            "code": code,
+            "error_message": error_message,
+            "requirements": requirements,
+            "instructions": (
+                "Review the provided code and error message. Identify and fix any issues, "
+                "ensuring compatibility with the given requirements. Provide the corrected "
+                "code as a JSON response."
+            ),
+            "response_format": {
+                "corrected_code": "The complete corrected Python code",
+                "explanation": "Explanation of the changes made"
+            }
+        }
+        
+        try:
+            response = create_completion(
+                self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an AI code reviewer and debugger."},
+                    {"role": "user", "content": json.dumps(prompt)}
+                ],
+                max_tokens=3500,
+                temperature=0.7,
+            )
+            
+            reviewed_package = parse_llm_response(response)
+            
+            if reviewed_package and isinstance(reviewed_package, dict) and 'corrected_code' in reviewed_package:
+                self.logger.info(f"Code review complete. Explanation: {reviewed_package.get('explanation', 'No explanation provided.')}")
+                return reviewed_package['corrected_code']
+            else:
+                self.logger.error("Failed to get valid reviewed code.")
+                return code
+        except Exception as e:
+            self.logger.error(f"Error during code review: {str(e)}")
+            return code
 
     def setup_environment(self, requirements):
         self.logger.info("Setting up execution environment...")
